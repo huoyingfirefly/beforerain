@@ -576,7 +576,7 @@ document.getElementById('newGameBtn').addEventListener('click', () => {
 // 属性滑块联动
 const sliders = ['Insight','Charm','Combat','Lore'];
 const attrIds = sliders.map(s => 'attr'+s);
-const maxPoints = 4;
+const maxPoints = 8;
 
 function updateSliderValues() {
     const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
@@ -608,7 +608,7 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
 
     // 开始新游戏：检查属性点
     const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
-    if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过4点！'); return; }
+    if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过8点！'); return; }
 
     // 保存角色
     meta.character = {
