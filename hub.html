@@ -490,13 +490,12 @@ function loadMeta() {
     return JSON.parse(JSON.stringify(DEFAULT_META));
 }
 
-// 版本检查：代码更新后自动强制刷新
+// 版本检查：代码更新后自动清旧缓存
 const savedHubVer = localStorage.getItem('hub_version');
 if (savedHubVer !== String(HUB_VERSION)) {
     localStorage.setItem('hub_version', String(HUB_VERSION));
-    // 清掉旧缓存并强制重新加载
     localStorage.removeItem('game_world');
-    location.reload(true);
+    localStorage.removeItem('game_story');
 }
 
 let meta = loadMeta();
@@ -586,7 +585,8 @@ function updateSliderValues() {
     document.getElementById('attrWarning').style.display = total > maxPoints ? 'block' : 'none';
 }
 attrIds.forEach(id => {
-    document.getElementById(id).addEventListener('input', updateSliderValues);
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateSliderValues);
 });
 
 // 世界观弹窗
