@@ -459,6 +459,52 @@ body {
 /* =============================================
    手机端适配 (≤ 600px)
    ============================================= */
+/* ======== 战斗面板 ======== */
+#combatPanel {
+    border: 1px solid var(--accent-red);
+    border-radius: 4px;
+    background: rgba(139,74,94,.08);
+    padding: 16px;
+    margin-bottom: 14px;
+    animation: fadeIn .4s;
+}
+.combat-hud {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 12px;
+}
+.combat-enemy, .combat-player { flex: 1; }
+.combat-label {
+    font-size: 13px; letter-spacing: 2px;
+    color: var(--text-light); margin-bottom: 4px;
+}
+.combat-vs {
+    font-size: 20px; color: var(--accent-red);
+    flex-shrink: 0;
+}
+.hp-bar {
+    height: 8px; border-radius: 4px;
+    background: var(--border-dark);
+    overflow: hidden; margin: 4px 0;
+}
+.hp-fill {
+    height: 100%; border-radius: 4px;
+    transition: width .3s;
+}
+.enemy-hp { background: var(--accent-red); }
+.player-hp { background: var(--accent-teal); }
+.hp-text {
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 1px;
+}
+.combat-btn {
+    border-color: var(--accent-red) !important;
+    background: rgba(139,74,94,.1) !important;
+}
+.combat-btn:hover {
+    border-color: #ff6b6b !important;
+    background: rgba(139,74,94,.2) !important;
+}
+
 @media (max-width: 600px) {
     .game-container { padding: 10px; }
 
@@ -605,6 +651,29 @@ body {
     </div>
 </div>
 
+<!-- ====== 战斗面板 ====== -->
+<div id="combatPanel" style="display:none;">
+    <div class="combat-hud">
+        <div class="combat-enemy">
+            <div class="combat-label" id="enemyName"></div>
+            <div class="hp-bar"><div class="hp-fill enemy-hp" id="enemyHpBar"></div></div>
+            <div class="hp-text" id="enemyHpText"></div>
+        </div>
+        <div class="combat-vs">⚔</div>
+        <div class="combat-player">
+            <div class="combat-label">你</div>
+            <div class="hp-bar"><div class="hp-fill player-hp" id="playerHpBar"></div></div>
+            <div class="hp-text" id="playerHpText"></div>
+        </div>
+    </div>
+    <div class="choices-area" id="combatActions">
+        <button class="choice-btn combat-btn" data-action="attack">⚔ 攻击</button>
+        <button class="choice-btn combat-btn" data-action="defend">🛡 防御</button>
+        <button class="choice-btn combat-btn" data-action="item">🎒 道具</button>
+        <button class="choice-btn combat-btn" data-action="flee">🏃 逃跑</button>
+    </div>
+</div>
+
 <script>
 // =============================================
 //  数据层
@@ -653,6 +722,12 @@ let opening;
 let history = [];
 let playing = false;
 let currentRoll = null;  // 当前掷骰结果 {value, attr}
+
+// 战斗状态
+let combat = {
+    active: false, enemy: '', enemyHp: 0, enemyMaxHp: 0,
+    playerHp: 0, playerMaxHp: 0,
+};
 
 function loadMeta() {
     try {
@@ -715,6 +790,8 @@ const AI_TEMPLATE = `你是互动剧本GM，严格遵循：
 【节奏】适当提高叙事节奏，将对话控制在35轮以内
 
 【D20掷骰】当玩家消息含"[掷出D20=X(结果)]"时，必须据此判定行动成败：1-5大失败 6-10失败 11-15成功 16-20大成功。检定结果融入叙事，大成功/大失败应有戏剧性描写。
+
+【战斗规则】触发战斗时输出"[进入战斗:敌人名|HP:X|伤害:Y]"。每回合等待玩家行动(攻击/防御/道具/逃跑)，据D20判定结果。玩家受伤输出"[-HP:X]"，敌人受伤输出"[敌-HP:X]"。敌方HP归零输出"[战斗胜利]"，玩家HP归零输出"[战斗失败]"。战斗结束后继续叙事。
 
 【铁则】不替玩家决定，等选择，允许自由行动，保持连贯。`;
 
@@ -898,11 +975,95 @@ function parseAI(text) {
         text = text.replace(itemMatch[0], '');
     }
 
-    return { amount, item, dead, text };
+    // 解析战斗进入
+    let combatStart = null;
+    const cbMatch = text.match(/\[进入战斗:([^|]+)\|HP:(\d+)\|伤害:(\d+)\]/);
+    if (cbMatch) {
+        combatStart = { enemy: cbMatch[1].trim(), hp: parseInt(cbMatch[2]), atk: parseInt(cbMatch[3]) };
+        text = text.replace(cbMatch[0], '');
+    }
+
+    // 解析伤害
+    let playerDmg = 0, enemyDmg = 0;
+    const pdMatch = text.match(/\[-HP:(\d+)\]/);
+    if (pdMatch) { playerDmg = parseInt(pdMatch[1]); text = text.replace(pdMatch[0], ''); }
+    const edMatch = text.match(/\[敌-HP:(\d+)\]/);
+    if (edMatch) { enemyDmg = parseInt(edMatch[1]); text = text.replace(edMatch[0], ''); }
+
+    // 解析战斗结束
+    let combatEnd = null;
+    if (/\[战斗胜利\]/.test(text)) { combatEnd = 'win'; text = text.replace(/\[战斗胜利\]/, ''); }
+    if (/\[战斗失败\]/.test(text)) { combatEnd = 'lose'; text = text.replace(/\[战斗失败\]/, ''); }
+
+    return { amount, item, dead, combatStart, playerDmg, enemyDmg, combatEnd, text };
+}
+
+// 初始化战斗
+function startCombat(enemy, hp, atk) {
+    combat.active = true;
+    combat.enemy = enemy;
+    combat.enemyMaxHp = hp; combat.enemyHp = hp;
+    combat.playerMaxHp = 10 + (meta.character.combat || 1) * 3;
+    combat.playerHp = combat.playerMaxHp;
+    updateCombatUI();
+    document.getElementById('combatPanel').style.display = 'block';
+    document.getElementById('choices').innerHTML = '';
+    document.getElementById('combatActions').style.display = 'flex';
+    disableInput(false);
+}
+
+function updateCombatUI() {
+    document.getElementById('enemyName').textContent = combat.enemy;
+    document.getElementById('enemyHpText').textContent = `${combat.enemyHp}/${combat.enemyMaxHp}`;
+    document.getElementById('playerHpText').textContent = `${combat.playerHp}/${combat.playerMaxHp}`;
+    document.getElementById('enemyHpBar').style.width = `${Math.max(0, combat.enemyHp/combat.enemyMaxHp*100)}%`;
+    document.getElementById('playerHpBar').style.width = `${Math.max(0, combat.playerHp/combat.playerMaxHp*100)}%`;
+}
+
+function endCombat(result) {
+    combat.active = false;
+    document.getElementById('combatPanel').style.display = 'none';
+    document.getElementById('combatActions').style.display = 'none';
+    if (result === 'lose') {
+        // 战斗失败 = 死亡
+        localStorage.removeItem(STORY_KEY);
+        saveMeta();
+        setTimeout(() => { window.location.href = '/'; }, 3000);
+    }
+    disableInput(false);
+    customInput.focus();
 }
 
 function renderNarrative(text) {
-    const { amount, item, dead, text: cleanText } = parseAI(text);
+    const { amount, item, dead, combatStart, playerDmg, enemyDmg, combatEnd, text: cleanText } = parseAI(text);
+
+    // 战斗状态更新
+    if (combatStart) startCombat(combatStart.enemy, combatStart.hp, combatStart.atk);
+    if (combat.active) {
+        if (playerDmg > 0) { combat.playerHp = Math.max(0, combat.playerHp - playerDmg); }
+        if (enemyDmg > 0) { combat.enemyHp = Math.max(0, combat.enemyHp - enemyDmg); }
+        updateCombatUI();
+
+        // 检查敌方死亡
+        if (combat.enemyHp <= 0 && !combatEnd) {
+            combat.enemyHp = 0;
+            updateCombatUI();
+            // 敌方血量为0，等待AI确认 [战斗胜利]
+        }
+        if (combat.playerHp <= 0 && !combatEnd) {
+            combat.playerHp = 0;
+            updateCombatUI();
+        }
+    }
+    if (combatEnd) {
+        if (combatEnd === 'win') {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = '⚔ 战斗胜利！';
+            storyEl.appendChild(popup);
+        }
+        endCombat(combatEnd);
+    }
 
     const sepIdx = cleanText.indexOf('---');
     let narrative = cleanText;
@@ -1143,6 +1304,21 @@ document.getElementById('loadBtn').addEventListener('click', () => {
     storyEl.scrollTop = storyEl.scrollHeight;
     playing = true;
     alert(`📂 读档成功！（${new Date(save.timestamp).toLocaleString()}）`);
+});
+
+// 战斗动作
+document.getElementById('combatActions').addEventListener('click', (e) => {
+    const btn = e.target.closest('.combat-btn');
+    if (!btn || !combat.active || customInput.disabled) return;
+    const action = btn.dataset.action;
+    const actions = { attack: '攻击', defend: '防御', item: '使用道具', flee: '逃跑' };
+    const div = document.createElement('div');
+    div.className = 'narrative';
+    div.style.color = 'var(--accent-red)';
+    div.innerHTML = `<p>▸ ${actions[action]}</p>`;
+    storyEl.appendChild(div);
+    const prompt = buildPrompt(`[战斗行动:${actions[action]}]`);
+    sendToAI(prompt);
 });
 
 // 重开
