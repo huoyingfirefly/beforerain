@@ -1040,10 +1040,12 @@ async function sendToAI(prompt, isSystem = false) {
 
     let fullResponse = '';
     try {
+        // 只保留最近 10 轮历史，防止 token 膨胀导致变慢
+        const trimHistory = history.slice(-20);
         const res = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, history, system: fullSystem }),
+            body: JSON.stringify({ prompt, history: trimHistory, system: fullSystem }),
         });
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
