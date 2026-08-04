@@ -380,6 +380,42 @@ body {
         <textarea id="worldInput" placeholder="简要描述这个世界的核心设定……" style="height:100px;"></textarea>
         <label>开场引导</label>
         <input id="openingInput" placeholder="输入你想体验的开场，留空则自动生成..." />
+
+        <hr style="border-color:var(--border-dark);margin:18px 0;">
+
+        <h3 style="font-size:14px;letter-spacing:4px;">角 色 创 建</h3>
+
+        <label>角色姓名</label>
+        <input id="charName" placeholder="为你的角色取名..." />
+
+        <label>背景简述</label>
+        <input id="charBg" placeholder="例如：流浪的神秘学家、基金会的叛逃者..." />
+
+        <label>属性分配（共4点可分配，每项1-3级）</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">洞察</span>
+                <input type="range" min="1" max="3" value="1" id="attrInsight" style="flex:1;accent-color:var(--gold);">
+                <span id="valInsight" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">魅力</span>
+                <input type="range" min="1" max="3" value="1" id="attrCharm" style="flex:1;accent-color:var(--gold);">
+                <span id="valCharm" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">战斗</span>
+                <input type="range" min="1" max="3" value="1" id="attrCombat" style="flex:1;accent-color:var(--gold);">
+                <span id="valCombat" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">学识</span>
+                <input type="range" min="1" max="3" value="1" id="attrLore" style="flex:1;accent-color:var(--gold);">
+                <span id="valLore" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+        </div>
+        <div id="attrWarning" style="color:var(--accent-red);font-size:11px;text-align:center;margin-top:6px;display:none;">总点数不能超过4点</div>
+
         <div class="btn-row">
             <button class="btn-secondary" id="closeWorldBtn">取消</button>
             <button class="btn-primary" id="startGameBtn">开始冒险</button>
@@ -410,6 +446,8 @@ const META_KEY  = 'game_meta';
 const DEFAULT_META = {
     currency: 0, totalEarned: 0, gamesPlayed: 0,
     boosts: { luck: 0, insight: 0, charm: 0, resilience: 0 },
+    character: { name: '', background: '', insight: 1, charm: 1, combat: 1, lore: 1 },
+    inventory: [],
 };
 
 const SHOP_ITEMS = [
@@ -439,7 +477,13 @@ function loadMeta() {
         const raw = localStorage.getItem(META_KEY);
         if (raw) {
             const saved = JSON.parse(raw);
-            return { ...DEFAULT_META, ...saved, boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) } };
+            return {
+                ...DEFAULT_META,
+                ...saved,
+                boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) },
+                character: { ...DEFAULT_META.character, ...(saved.character||{}) },
+                inventory: saved.inventory || [],
+            };
         }
     } catch(e) {}
     return JSON.parse(JSON.stringify(DEFAULT_META));
@@ -520,6 +564,21 @@ document.getElementById('newGameBtn').addEventListener('click', () => {
     document.getElementById('worldModal').classList.add('show');
 });
 
+// 属性滑块联动
+const sliders = ['Insight','Charm','Combat','Lore'];
+const attrIds = sliders.map(s => 'attr'+s);
+const maxPoints = 4;
+
+function updateSliderValues() {
+    const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
+    const total = vals.reduce((a,b)=>a+b, 0);
+    sliders.forEach((s, i) => document.getElementById('val'+s).textContent = vals[i]);
+    document.getElementById('attrWarning').style.display = total > maxPoints ? 'block' : 'none';
+}
+attrIds.forEach(id => {
+    document.getElementById(id).addEventListener('input', updateSliderValues);
+});
+
 // 世界观弹窗
 document.getElementById('closeWorldBtn').addEventListener('click', () => {
     document.getElementById('worldModal').classList.remove('show');
@@ -527,8 +586,20 @@ document.getElementById('closeWorldBtn').addEventListener('click', () => {
 document.getElementById('startGameBtn').addEventListener('click', () => {
     const world = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
     const opening = document.getElementById('openingInput').value.trim() || DEFAULT_OPENING;
+
+    // 检查属性点
+    const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
+    if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过4点！'); return; }
+
+    // 保存角色
+    meta.character = {
+        name: document.getElementById('charName').value.trim() || '无名者',
+        background: document.getElementById('charBg').value.trim() || '来历不明',
+        insight: vals[0], charm: vals[1], combat: vals[2], lore: vals[3],
+    };
+    meta.inventory = [];  // 新游戏清空背包
+
     localStorage.setItem(WORLD_KEY, world);
-    // 清除旧存档，开始新游戏
     localStorage.removeItem(STORY_KEY);
     meta.gamesPlayed++;
     saveMeta();

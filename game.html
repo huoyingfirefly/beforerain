@@ -535,6 +535,7 @@ body {
     <!-- ====== 工具栏 ====== -->
     <div class="toolbar">
         <button id="worldBtn">⚙ 世界观</button>
+        <button id="invBtn">📦 背包</button>
         <button id="shopBtn" class="shop-btn">⏳ 商店</button>
         <button id="saveBtn">💾 存档</button>
         <button id="loadBtn">📂 读档</button>
@@ -569,6 +570,17 @@ body {
     </div>
 </div>
 
+<!-- ====== 背包弹窗 ====== -->
+<div class="modal-overlay" id="invModal">
+    <div class="modal">
+        <h3>背 包</h3>
+        <div id="invList" style="min-height:80px;color:var(--text-dim);text-align:center;padding:20px;">背包空空如也</div>
+        <div class="btn-row">
+            <button class="btn-secondary" id="closeInvBtn">关闭</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // =============================================
 //  数据层
@@ -576,19 +588,30 @@ body {
 const STORY_KEY = 'game_story';
 const WORLD_KEY = 'game_world';
 const META_KEY  = 'game_meta';
-const VERSION   = 6;  // 改代码后手动 +1，自动清旧缓存
+const VERSION   = 7;  // 改代码后手动 +1，自动清旧缓存
 
 // 局外养成数据
 const DEFAULT_META = {
     currency: 0,       // 纺锤
     totalEarned: 0,    // 累计获得
     gamesPlayed: 0,    // 游玩次数
-    boosts: {           // 已购加成（数量=等级）
-        luck: 0,        // 幸运之星：AI 略微偏向有利结果
-        insight: 0,     // 洞察之眼：多揭示一个选项
-        charm: 0,       // 魅力之证：NPC 初始好感更高
-        resilience: 0,  // 坚韧之心：危险中存活率提升
+    boosts: {          // 已购加成（数量=等级）
+        luck: 0,       // 幸运之星
+        insight: 0,    // 洞察之眼
+        charm: 0,      // 魅力之证
+        resilience: 0, // 坚韧之心
     },
+    // 角色系统
+    character: {
+        name: '',       // 玩家角色名
+        background: '', // 背景简述
+        insight: 1,     // 洞察（观察、推理、感知）
+        charm: 1,       // 魅力（社交、说服、伪装）
+        combat: 1,      // 战斗（格斗、武器、生存）
+        lore: 1,        // 学识（神秘术、历史、典籍）
+    },
+    // 背包
+    inventory: [],      // [{name, desc, qty}]
 };
 
 // 商店商品
@@ -611,8 +634,13 @@ function loadMeta() {
         const raw = localStorage.getItem(META_KEY);
         if (raw) {
             const saved = JSON.parse(raw);
-            // 合并默认值（兼容新增字段）
-            return { ...DEFAULT_META, ...saved, boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) } };
+            return {
+                ...DEFAULT_META,
+                ...saved,
+                boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) },
+                character: { ...DEFAULT_META.character, ...(saved.character||{}) },
+                inventory: saved.inventory || [],
+            };
         }
     } catch(e) {}
     return JSON.parse(JSON.stringify(DEFAULT_META));
@@ -669,20 +697,30 @@ const AI_TEMPLATE = `你是互动剧本游戏的主持人（GM）。你必须将
 - 提到的角色是否与档案一致？（性格、能力不可改）
 - 是否有不合世界逻辑的"方便设定"？（如果有，删掉）
 
+【技能检定规则】
+玩家拥有四项属性（1=新手 2=入门 3=熟练 4=专家 5=大师）：
+- 洞察：观察环境、识破谎言、感知危险
+- 魅力：说服他人、伪装身份、获取信任
+- 战斗：格斗、武器使用、体能对抗
+- 学识：神秘术理解、典籍解读、历史认知
+当玩家做出有风险的选择时，依据对应属性判定结果。属性高则成功概率大，属性低则可能失败或付出代价。检定结果自然地融入叙事。
+
+【道具奖励规则】
+当玩家获得物品时，在段尾输出：\n[+道具:名称|简短描述]
+例如：[+道具:基金会徽章|一枚古旧的圣洛夫基金会身份凭证]
+
 【叙事职责】
-1. 通俗简洁，100-150字。禁止生造词和过度修饰。
+1. 通俗简洁，100-150字。禁止生造词。
 2. 关键节点用"---"分隔，其后列出3个选项（格式：1. 选项描述）。
 3. 选项需有实质差异（冒险/谨慎/对话/逃避等不同方向）。
-4. 玩家可扮演任意角色，初始能力随机但需符合世界逻辑。
-5. 适度提高难度——暴雨环境本质是残酷的，不要每次都轻松化解危机。
+4. 适度提高难度——暴雨环境本质残酷，结合玩家属性决定成败。
 
 【纺锤评分】
-每段结尾根据玩家选择质量奖励：
-平庸+2~5 / 机智+6~12 / 惊艳+13~20
+每段结尾根据选择质量奖励：平庸+2~5 / 机智+6~12 / 惊艳+13~20
 格式：在"---"前另起一行写 "[+X纺锤]"。
 
 【铁则】
-不替玩家做任何决定。始终等待选择。允许玩家输入自由行动。保持严格故事连贯。可有死亡结局——让玩家感受到"暴雨"的真正威胁。`;
+不替玩家做任何决定。始终等待选择。允许自由行动。保持故事连贯。可有死亡结局——让玩家感受到"暴雨"的真正威胁。`;
 
 // 玩家可见的世界观简述（仅世界观背景，不含 AI 指令）
 const DEFAULT_WORLD_LORE = `【暴雨机制】
@@ -722,14 +760,48 @@ opening = DEFAULT_OPENING;
 //  构建加成提示词
 // =============================================
 function buildBoostPrompt() {
-    let text = '';
+    const parts = [];
+
+    // 角色信息
+    const c = meta.character;
+    if (c.name) {
+        const attrNames = ['','新手','入门','熟练','专家','大师'];
+        parts.push(`【玩家角色】
+姓名：${c.name}
+背景：${c.background || '未知'}
+洞察${attrNames[c.insight]||'新手'} | 魅力${attrNames[c.charm]||'新手'} | 战斗${attrNames[c.combat]||'新手'} | 学识${attrNames[c.lore]||'新手'}`);
+    }
+
+    // 背包
+    const inv = meta.inventory || [];
+    if (inv.length > 0) {
+        parts.push('【背包物资】\n' + inv.map(i => `- ${i.name}：${i.desc}${i.qty > 1 ? ' ×'+i.qty : ''}`).join('\n'));
+    } else {
+        parts.push('【背包物资】\n（空）');
+    }
+
+    // 加成
+    let boostText = '';
     const b = meta.boosts;
-    if (b.luck > 0)       text += `【幸运之星 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果，概率随等级提升。\n`;
-    if (b.insight > 0)    text += `【洞察之眼 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项。\n`;
-    if (b.charm > 0)      text += `【魅力之证 Lv.${b.charm}】NPC 对玩家的初始好感度提升，对话更易获得信任。\n`;
-    if (b.resilience > 0) text += `【坚韧之心 Lv.${b.resilience}】面对致命危险时给予多一次逃生机会，避免直接死亡结局。\n`;
-    if (text) text = '【当前激活的加成】\n' + text;
-    return text;
+    if (b.luck > 0)       boostText += `【幸运之星 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
+    if (b.insight > 0)    boostText += `【洞察之眼 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项\n`;
+    if (b.charm > 0)      boostText += `【魅力之证 Lv.${b.charm}】NPC 初始好感度提升\n`;
+    if (b.resilience > 0) boostText += `【坚韧之心 Lv.${b.resilience}】面临致命危险多一次逃生机会\n`;
+    if (boostText) parts.push('【当前激活的加成】\n' + boostText);
+
+    return parts.join('\n\n');
+}
+
+function addItem(name, desc) {
+    if (!meta.inventory) meta.inventory = [];
+    const existing = meta.inventory.find(i => i.name === name);
+    if (existing) {
+        existing.qty++;
+    } else {
+        meta.inventory.push({ name, desc, qty: 1 });
+    }
+    saveMeta();
+    updateInventoryUI();
 }
 
 // =============================================
@@ -789,18 +861,32 @@ function buyBoost(id, cost) {
 const storyEl = document.getElementById('story');
 const choicesEl = document.getElementById('choices');
 
-function parseScore(text) {
-    const match = text.match(/\[\+(\d+)纺锤\]/);
-    if (match) {
-        const amount = parseInt(match[1]);
+function parseAI(text) {
+    let amount = 0;
+    let item = null;
+
+    // 解析纺锤 [+X纺锤]
+    const coinMatch = text.match(/\[\+(\d+)纺锤\]/);
+    if (coinMatch) {
+        amount = parseInt(coinMatch[1]);
         addCurrency(amount);
-        return { amount, text: text.replace(match[0], '') };
+        text = text.replace(coinMatch[0], '');
     }
-    return { amount: 0, text };
+
+    // 解析道具 [+道具:名称|描述]
+    const itemMatch = text.match(/\[\+道具:([^|\]]+)\|([^\]]+)\]/);
+    if (itemMatch) {
+        item = { name: itemMatch[1].trim(), desc: itemMatch[2].trim() };
+        addItem(item.name, item.desc);
+        text = text.replace(itemMatch[0], '');
+    }
+
+    return { amount, item, text };
 }
 
 function renderNarrative(text) {
-    const { amount, text: cleanText } = parseScore(text);
+function renderNarrative(text) {
+    const { amount, item, text: cleanText } = parseAI(text);
 
     const sepIdx = cleanText.indexOf('---');
     let narrative = cleanText;
@@ -830,6 +916,15 @@ function renderNarrative(text) {
         popup.textContent = `⏳ +${amount} 纺锤`;
         storyEl.appendChild(popup);
         updateStatusBar();
+    }
+
+    // 道具获得提示
+    if (item) {
+        const popup = document.createElement('div');
+        popup.className = 'score-popup';
+        popup.style.color = 'var(--accent-teal)';
+        popup.textContent = `📦 获得道具：${item.name}`;
+        storyEl.appendChild(popup);
     }
 
     // 选项
@@ -1016,10 +1111,34 @@ document.getElementById('shopBtn').addEventListener('click', () => {
 });
 document.getElementById('closeShopBtn').addEventListener('click', () => shopModal.classList.remove('show'));
 
+// 背包弹窗
+const invModal = document.getElementById('invModal');
+function updateInventoryUI() {
+    const inv = meta.inventory || [];
+    const list = document.getElementById('invList');
+    if (inv.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-dim);text-align:center;padding:20px;">背包空空如也</div>';
+    } else {
+        list.innerHTML = inv.map(i => `
+            <div class="shop-item">
+                <div class="shop-info">
+                    <div class="shop-name">📦 ${i.name}${i.qty > 1 ? ` ×${i.qty}` : ''}</div>
+                    <div class="shop-desc">${i.desc}</div>
+                </div>
+            </div>`).join('');
+    }
+}
+document.getElementById('invBtn').addEventListener('click', () => {
+    updateInventoryUI();
+    invModal.classList.add('show');
+});
+document.getElementById('closeInvBtn').addEventListener('click', () => invModal.classList.remove('show'));
+
 // 快捷键
 document.addEventListener('keydown', e => {
     if (document.getElementById('worldModal').classList.contains('show') ||
-        document.getElementById('shopModal').classList.contains('show')) return;
+        document.getElementById('shopModal').classList.contains('show') ||
+        document.getElementById('invModal').classList.contains('show')) return;
     if (e.key >= '1' && e.key <= '9') {
         const btns = choicesEl.querySelectorAll('.choice-btn');
         const idx = parseInt(e.key) - 1;
