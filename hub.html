@@ -585,9 +585,18 @@ document.getElementById('closeWorldBtn').addEventListener('click', () => {
 });
 document.getElementById('startGameBtn').addEventListener('click', () => {
     const world = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
-    const opening = document.getElementById('openingInput').value.trim() || DEFAULT_OPENING;
+    const mode = document.getElementById('startGameBtn').dataset.mode;
 
-    // 检查属性点
+    if (mode === 'save-only') {
+        // 仅保存世界观，不进游戏
+        localStorage.setItem(WORLD_KEY, world);
+        document.getElementById('worldModal').classList.remove('show');
+        document.getElementById('startGameBtn').textContent = '开始冒险';
+        document.getElementById('startGameBtn').dataset.mode = '';
+        return;
+    }
+
+    // 开始新游戏：检查属性点
     const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
     if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过4点！'); return; }
 
@@ -597,7 +606,7 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
         background: document.getElementById('charBg').value.trim() || '来历不明',
         insight: vals[0], charm: vals[1], combat: vals[2], lore: vals[3],
     };
-    meta.inventory = [];  // 新游戏清空背包
+    meta.inventory = [];
 
     localStorage.setItem(WORLD_KEY, world);
     localStorage.removeItem(STORY_KEY);
@@ -633,15 +642,8 @@ document.getElementById('worldBtn').addEventListener('click', () => {
     document.getElementById('worldModal').classList.add('show');
 });
 
-// 覆盖 startGameBtn 逻辑以支持"只保存"模式
-document.getElementById('startGameBtn').addEventListener('click', function() {
-    const world = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
-    localStorage.setItem(WORLD_KEY, world);
-    document.getElementById('worldModal').classList.remove('show');
-    // 恢复默认
-    this.textContent = '开始冒险';
-    this.dataset.mode = '';
-});
+// 注意：startGameBtn 的逻辑已统一在上方 handler 中
+// 通过 startBtn.dataset.mode === 'save-only' 区分模式
 
 // =============================================
 //  初始化
