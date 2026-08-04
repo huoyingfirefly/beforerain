@@ -442,6 +442,7 @@ body {
 const STORY_KEY = 'game_story';
 const WORLD_KEY = 'game_world';
 const META_KEY  = 'game_meta';
+const HUB_VERSION = 1;  // 改代码后手动 +1，清缓存强制刷新
 
 const DEFAULT_META = {
     currency: 0, totalEarned: 0, gamesPlayed: 0,
@@ -487,6 +488,15 @@ function loadMeta() {
         }
     } catch(e) {}
     return JSON.parse(JSON.stringify(DEFAULT_META));
+}
+
+// 版本检查：代码更新后自动强制刷新
+const savedHubVer = localStorage.getItem('hub_version');
+if (savedHubVer !== String(HUB_VERSION)) {
+    localStorage.setItem('hub_version', String(HUB_VERSION));
+    // 清掉旧缓存并强制重新加载
+    localStorage.removeItem('game_world');
+    location.reload(true);
 }
 
 let meta = loadMeta();
