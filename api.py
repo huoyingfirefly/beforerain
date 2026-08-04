@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
@@ -7,6 +8,9 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# 项目根目录（api.py 所在目录）
+BASE_DIR = Path(__file__).parent
 
 app = FastAPI(title="DeepSeek API")
 
@@ -69,8 +73,6 @@ def chat(req: ChatRequest):
     )
 
 
-from fastapi import Response
-
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -78,17 +80,17 @@ def health():
 
 @app.get("/")
 def index():
-    return FileResponse("hub.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse(BASE_DIR / "hub.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
 @app.get("/chat-page")
 def chat_page():
-    return FileResponse("chat.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse(BASE_DIR / "chat.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
 @app.get("/game")
 def game():
-    return FileResponse("game.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+    return FileResponse(BASE_DIR / "game.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
 # ---------- 启动 ----------
