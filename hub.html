@@ -386,10 +386,10 @@ body {
         <h3 style="font-size:14px;letter-spacing:4px;">角 色 创 建</h3>
 
         <label>角色姓名</label>
-        <input id="charName" placeholder="为你的角色取名..." />
+        <input id="charName" placeholder="为角色取名，留空则随机分配..." />
 
         <label>背景简述</label>
-        <input id="charBg" placeholder="例如：流浪的神秘学家、基金会的叛逃者..." />
+        <input id="charBg" placeholder="描述角色背景，留空则随机分配..." />
 
         <label>属性分配（共4点可分配，每项1-3级）</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
@@ -610,10 +610,23 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
     const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
     if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过8点！'); return; }
 
+    // 随机身份库
+    const randNames = ['艾琳', '诺亚', '塞西尔', '维奥莱特', '赫克托', '奥菲莉亚', '多里安', '伊莎朵拉', '雷恩', '莉迪亚'];
+    const randBgs = [
+        '基金会的低级调查员，被派往危险区域执行任务',
+        '流浪的神秘学家，靠打零工维生，无门无派',
+        '一战老兵，退役后四处漂泊寻找容身之处',
+        '小镇诊所的护士，在暴雨中失去了所有亲人',
+        '前黑帮成员，隐姓埋名试图重新开始',
+        '图书馆的档案管理员，偶然发现了暴雨的秘密',
+        '逃离家庭的学生，带着一本破旧的神秘术典籍',
+        '伯爵家的马车夫，在主人被抹除后继承了马车和秘密',
+    ];
+
     // 保存角色
     meta.character = {
-        name: document.getElementById('charName').value.trim() || '无名者',
-        background: document.getElementById('charBg').value.trim() || '来历不明',
+        name: document.getElementById('charName').value.trim() || randNames[Math.floor(Math.random() * randNames.length)],
+        background: document.getElementById('charBg').value.trim() || randBgs[Math.floor(Math.random() * randBgs.length)],
         insight: vals[0], charm: vals[1], combat: vals[2], lore: vals[3],
     };
     meta.inventory = [];
