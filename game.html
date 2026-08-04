@@ -291,6 +291,28 @@ body {
 }
 .custom-area button:hover { border-color: var(--gold-dim); background: #161d30; }
 .custom-area button:disabled { opacity: .3; cursor: not-allowed; }
+#diceBtn {
+    padding: 12px 14px; font-size: 20px;
+    letter-spacing: 0; min-width: 50px;
+}
+#diceBtn.rolling {
+    animation: diceRoll .3s ease-out;
+    pointer-events: none;
+}
+@keyframes diceRoll {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.2); }
+    50% { transform: rotate(180deg) scale(0.9); }
+    75% { transform: rotate(270deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+#diceResult.show { display: block !important; animation: diceReveal .4s ease-out; }
+@keyframes diceReveal {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+}
+.dice-crit { color: #ffcc00; text-shadow: 0 0 8px rgba(255,200,0,.5); }
+.dice-fail { color: var(--accent-red); }
 
 /* ======== 工具栏 ======== */
 .toolbar {
@@ -528,9 +550,11 @@ body {
 
     <!-- ====== 输入 ====== -->
     <div class="custom-area">
+        <button id="diceBtn" title="掷D20">🎲</button>
         <input id="customInput" placeholder="输入你的行动..." autofocus />
         <button id="customBtn">执 行</button>
     </div>
+    <div id="diceResult" style="display:none;text-align:center;padding:4px 0;font-size:13px;letter-spacing:1px;"></div>
 
     <!-- ====== 工具栏 ====== -->
     <div class="toolbar">
@@ -628,6 +652,7 @@ let worldSetting;
 let opening;
 let history = [];
 let playing = false;
+let currentRoll = null;  // 当前掷骰结果 {value, attr}
 
 function loadMeta() {
     try {
@@ -685,6 +710,12 @@ const AI_TEMPLATE = `你是互动剧本GM，严格遵循：
 
 【死亡】角色死亡时输出"[玩家死亡]"，写简短后记，不给选项。
 
+【难度】若玩家属性值较低难度应适当提高，保证一定的博弈性
+
+【节奏】适当提高叙事节奏，将对话控制在35轮以内
+
+【D20掷骰】当玩家消息含"[掷出D20=X(结果)]"时，必须据此判定行动成败：1-5大失败 6-10失败 11-15成功 16-20大成功。检定结果融入叙事，大成功/大失败应有戏剧性描写。
+
 【铁则】不替玩家决定，等选择，允许自由行动，保持连贯。`;
 
 // 玩家可见的世界观简述（仅世界观背景，不含 AI 指令）
@@ -705,7 +736,7 @@ const DEFAULT_WORLD_LORE = `【暴雨机制】
 - 海因里希：博学的时序感知者。不站任何派系，只求保存文明记录。
 - 马库斯：孤儿院出身，解读型神秘学家，成长后为基金会重要战力。
 - 斯奈德：纯人类黑帮之女，双枪格斗，无神秘学天赋。
-- 露西：基金会理性指挥官，机械电能系神秘学家。
+- 露西：拉普拉斯科算中心理性指挥官，外观是女性机器人，机械电能系神秘学家。
 
 【势力】
 - 圣洛夫基金会：人类侧对抗暴雨的核心组织，研究暴雨规律与庇护手段。
@@ -1016,7 +1047,7 @@ async function makeChoice(choice) {
     div.innerHTML = `<p>▸ ${choice}</p>`;
     storyEl.appendChild(div);
     choicesEl.innerHTML = '';
-    await sendToAI(choice);
+    await sendToAI(buildPrompt(choice));
 }
 
 async function customAction() {
@@ -1029,7 +1060,7 @@ async function customAction() {
     div.innerHTML = `<p>▸ ${action}</p>`;
     storyEl.appendChild(div);
     choicesEl.innerHTML = '';
-    await sendToAI(action);
+    await sendToAI(buildPrompt(action));
 }
 
 // =============================================
@@ -1037,6 +1068,42 @@ async function customAction() {
 // =============================================
 customBtn.addEventListener('click', customAction);
 customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customAction(); });
+
+// 骰子按钮
+const diceBtn = document.getElementById('diceBtn');
+const diceResult = document.getElementById('diceResult');
+diceBtn.addEventListener('click', () => {
+    if (customInput.disabled) return;
+    diceBtn.classList.add('rolling');
+    diceBtn.disabled = true;
+    setTimeout(() => {
+        const value = Math.floor(Math.random() * 20) + 1;
+        currentRoll = { value };
+        const cls = value >= 16 ? 'dice-crit' : value <= 5 ? 'dice-fail' : '';
+        diceResult.innerHTML = `🎲 D20 = <span class="${cls}"><b>${value}</b></span>`;
+        diceResult.className = 'show';
+        diceBtn.classList.remove('rolling');
+        diceBtn.disabled = false;
+    }, 300);
+});
+
+// 发送时将掷骰结果附加到 prompt
+function buildPrompt(action) {
+    if (currentRoll) {
+        const r = currentRoll;
+        currentRoll = null;
+        diceResult.className = '';
+        diceResult.style.display = 'none';
+        // 判定结果描述
+        let resultDesc = '';
+        if (r.value >= 16) resultDesc = ' (大成功)';
+        else if (r.value >= 11) resultDesc = ' (成功)';
+        else if (r.value >= 6) resultDesc = ' (失败)';
+        else resultDesc = ' (大失败)';
+        return `[掷出D20=${r.value}${resultDesc}] ${action}`;
+    }
+    return action;
+}
 
 // 存档
 document.getElementById('saveBtn').addEventListener('click', () => {
