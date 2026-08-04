@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>雨前演练</title>
+<style>
+/* ========================================
+   重返未来1999 风格 UI
+   ======================================== */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg-deep: #080c14;
+    --bg-panel: #0d1221;
+    --bg-card: #111827;
+    --border-dark: #1c2540;
+    --border-mid: #2a3555;
+    --gold: #c8a45c;
+    --gold-light: #d4bf7a;
+    --gold-dim: #8a7040;
+    --text-main: #c8ccd4;
+    --text-dim: #6e7690;
+    --text-light: #e0dcc8;
+    --accent-blue: #4a7d9e;
+    --accent-teal: #3d7a7a;
+    --accent-red: #8b4a5e;
+    --glow-gold: rgba(200,164,92,.15);
+    --glow-blue: rgba(74,125,158,.1);
+}
+
+body {
+    font-family: 'Cormorant Garamond', 'Georgia', 'Noto Serif SC', 'SimSun', serif;
+    background-color: #0a0e1a;
+    /* 复古英伦手提箱花纹：深蓝与紫色交替的菱格纹 */
+    background-image:
+        /* 铆钉点 — 菱格交叉处 */
+        radial-gradient(circle 3px, rgba(180,160,200,.25) 30%, transparent 30%),
+        radial-gradient(circle 3px, rgba(180,160,200,.25) 30%, transparent 30%),
+        /* 缝合虚线 — 对角线 */
+        repeating-linear-gradient(45deg,
+            transparent,
+            transparent 38px,
+            rgba(170,155,195,.08) 38px,
+            rgba(170,155,195,.08) 40px),
+        repeating-linear-gradient(-45deg,
+            transparent,
+            transparent 38px,
+            rgba(170,155,195,.08) 38px,
+            rgba(170,155,195,.08) 40px),
+        /* 深蓝菱形块 */
+        repeating-linear-gradient(45deg,
+            #0d1330 0px,
+            #0d1330 18px,
+            transparent 18px,
+            transparent 38px),
+        /* 深紫菱形块 */
+        repeating-linear-gradient(-45deg,
+            #181030 0px,
+            #181030 18px,
+            transparent 18px,
+            transparent 38px),
+        /* 皮质纹理噪点 */
+        repeating-linear-gradient(0deg,
+            transparent,
+            transparent 2px,
+            rgba(0,0,0,.03) 2px,
+            rgba(0,0,0,.03) 4px),
+        /* 全局暗角 */
+        radial-gradient(ellipse at 50% 0%, rgba(120,100,180,.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 30% 100%, rgba(60,80,140,.04) 0%, transparent 50%);
+    background-position:
+        19px 19px,
+        57px 57px,
+        0 0, 0 0,
+        0 0, 0 0,
+        0 0,
+        0 0, 0 0;
+    background-size:
+        76px 76px,
+        76px 76px,
+        76px 76px,
+        76px 76px,
+        76px 76px,
+        76px 76px,
+        8px 8px,
+        100% 100%, 100% 100%;
+    background-attachment: fixed;
+    color: var(--text-main);
+    display: flex; justify-content: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    width: 100%; max-width: 800px;
+    display: flex; flex-direction: column;
+    padding: 20px;
+}
+
+/* ======== 顶部状态栏 ======== */
+.status-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+.status-left, .status-right {
+    display: flex; align-items: center; gap: 18px;
+}
+.currency-display {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--gold);
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.currency-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 4px var(--glow-gold));
+}
+.boost-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    color: var(--gold-light);
+    letter-spacing: 1px;
+    background: rgba(200,164,92,.05);
+}
+.boost-badge:empty::after { content: '无加成'; color: var(--text-dim); }
+
+/* ======== 标题栏 ======== */
+.header {
+    text-align: center;
+    padding: 24px 0 20px;
+    position: relative;
+    margin-bottom: 20px;
+}
+.header-frame {
+    display: inline-block;
+    padding: 16px 48px;
+    border: 1px solid var(--border-mid);
+    position: relative;
+    background: rgba(13,18,33,.6);
+}
+.header-frame::before, .header-frame::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border-color: var(--gold);
+    border-style: solid;
+}
+.header-frame::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.header-frame::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+.header h1 {
+    font-size: 28px;
+    letter-spacing: 8px;
+    color: var(--gold-light);
+    font-weight: 400;
+    text-shadow: 0 0 30px rgba(200,164,92,.2);
+}
+.header .sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* ======== 故事面板 ======== */
+.story-panel {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    padding: 30px 28px;
+    margin-bottom: 16px;
+    min-height: 280px;
+    max-height: 50vh;
+    overflow-y: auto;
+    line-height: 2;
+    font-size: 16px;
+    letter-spacing: .3px;
+    box-shadow: inset 0 0 80px rgba(0,0,0,.4);
+    position: relative;
+}
+.story-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,164,92,.2), transparent);
+}
+.story-panel::-webkit-scrollbar { width: 5px; }
+.story-panel::-webkit-scrollbar-track { background: transparent; }
+.story-panel::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+.story-panel .narrative { animation: fadeIn .8s; }
+.story-panel .narrative p { margin-bottom: 16px; }
+.story-panel .narrative p:first-of-type::first-letter {
+    font-size: 2.6em; float: left; line-height: .8;
+    padding-right: 6px; padding-top: 2px;
+    color: var(--gold); font-weight: 600;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+
+.story-panel .divider {
+    border: none; text-align: center;
+    margin: 22px 0; color: var(--gold-dim);
+    font-size: 10px; letter-spacing: 6px;
+}
+.story-panel .divider::before { content: '◆ ◆ ◆'; }
+
+.story-panel .score-popup {
+    display: block;
+    text-align: center;
+    color: var(--gold-light);
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 8px 0;
+    animation: scoreGlow .6s ease-out;
+}
+@keyframes scoreGlow {
+    from { text-shadow: 0 0 20px rgba(200,164,92,.8); }
+    to   { text-shadow: 0 0 0 rgba(200,164,92,0); }
+}
+
+/* ======== 选项区 ======== */
+.choices-area {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 14px;
+}
+.choice-btn {
+    flex: 1; min-width: 170px;
+    padding: 13px 18px;
+    border: 1px solid var(--border-mid);
+    border-radius: 3px;
+    background: var(--bg-card);
+    color: var(--text-light);
+    font-size: 14px; font-family: inherit;
+    cursor: pointer;
+    transition: all .3s;
+    letter-spacing: .5px;
+    position: relative;
+}
+.choice-btn::after {
+    content: '';
+    position: absolute; bottom: 0; left: 10%; right: 10%; height: 1px;
+    background: var(--gold);
+    transform: scaleX(0); transition: transform .3s;
+}
+.choice-btn:hover::after { transform: scaleX(1); }
+.choice-btn:hover {
+    border-color: var(--gold-dim);
+    background: #161d30;
+    color: #fff;
+}
+.choice-btn:active { transform: scale(.98); }
+.choice-btn:disabled { opacity: .3; pointer-events: none; }
+
+/* ======== 自定义输入 ======== */
+.custom-area {
+    display: flex; gap: 10px;
+}
+.custom-area input {
+    flex: 1;
+    padding: 12px 18px;
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    background: var(--bg-panel);
+    color: var(--text-main);
+    font-size: 15px; font-family: inherit;
+    outline: none;
+    letter-spacing: .5px;
+}
+.custom-area input::placeholder { color: var(--text-dim); font-style: italic; }
+.custom-area input:focus { border-color: var(--gold-dim); }
+.custom-area button {
+    padding: 12px 22px;
+    border: 1px solid var(--border-mid);
+    border-radius: 3px;
+    background: var(--bg-card);
+    color: var(--text-light);
+    font-size: 14px; font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 3px;
+    transition: all .3s;
+}
+.custom-area button:hover { border-color: var(--gold-dim); background: #161d30; }
+.custom-area button:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ======== 工具栏 ======== */
+.toolbar {
+    display: flex; gap: 10px; justify-content: center;
+    margin-top: 12px; flex-wrap: wrap;
+}
+.toolbar button {
+    padding: 7px 18px;
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px; font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all .3s;
+}
+.toolbar button:hover { color: var(--gold-light); border-color: var(--border-mid); }
+.toolbar button.shop-btn { color: var(--gold); border-color: var(--gold-dim); }
+.toolbar button.shop-btn:hover { background: rgba(200,164,92,.08); }
+
+/* ======== 弹窗通用 ======== */
+.modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(4,6,10,.85);
+    justify-content: center; align-items: center;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+.modal-overlay.show { display: flex; }
+.modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    border-radius: 4px;
+    padding: 30px;
+    width: 90%; max-width: 520px;
+    max-height: 82vh; overflow-y: auto;
+    box-shadow: 0 0 60px rgba(0,0,0,.6);
+    position: relative;
+}
+.modal::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,164,92,.3), transparent);
+}
+.modal h3 {
+    color: var(--gold);
+    letter-spacing: 6px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 400;
+    font-size: 18px;
+}
+.modal label {
+    display: block; color: var(--text-dim);
+    font-size: 11px; margin: 14px 0 6px;
+    letter-spacing: 2px; text-transform: uppercase;
+}
+.modal textarea, .modal input {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    background: var(--bg-deep);
+    color: var(--text-main);
+    font-size: 14px; font-family: inherit;
+    outline: none; resize: vertical;
+}
+.modal textarea:focus, .modal input:focus { border-color: var(--gold-dim); }
+.modal textarea { height: 110px; }
+.modal .btn-row {
+    display: flex; gap: 12px; justify-content: center;
+    margin-top: 22px;
+}
+.modal .btn-row button {
+    padding: 10px 28px; border-radius: 3px;
+    font-size: 14px; font-family: inherit;
+    cursor: pointer; letter-spacing: 3px;
+    transition: all .3s;
+}
+.btn-primary {
+    border: 1px solid var(--gold);
+    background: var(--gold);
+    color: var(--bg-deep);
+    font-weight: 600;
+}
+.btn-primary:hover { background: var(--gold-light); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-secondary {
+    border: 1px solid var(--border-mid);
+    background: transparent; color: var(--text-dim);
+}
+.btn-secondary:hover { border-color: var(--gold-dim); color: var(--gold-light); }
+
+/* ======== 商店 ======== */
+.shop-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    margin-bottom: 10px;
+    background: var(--bg-card);
+    transition: all .3s;
+}
+.shop-item:hover { border-color: var(--border-mid); }
+.shop-info { flex: 1; }
+.shop-name { color: var(--text-light); font-size: 15px; letter-spacing: 1px; }
+.shop-desc { color: var(--text-dim); font-size: 12px; margin-top: 4px; letter-spacing: .5px; }
+.shop-cost {
+    color: var(--gold);
+    font-size: 14px;
+    white-space: nowrap;
+    margin: 0 14px;
+    letter-spacing: 1px;
+}
+.shop-buy {
+    padding: 6px 16px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--gold);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all .3s;
+    white-space: nowrap;
+}
+.shop-buy:hover { background: rgba(200,164,92,.1); color: var(--gold-light); }
+.shop-buy:disabled { opacity: .3; cursor: not-allowed; }
+.shop-owned { color: var(--accent-teal); font-size: 12px; letter-spacing: 1px; }
+
+.currency-big {
+    text-align: center;
+    font-size: 24px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    padding: 8px 0 16px;
+    border-bottom: 1px solid var(--border-dark);
+    margin-bottom: 16px;
+}
+
+/* =============================================
+   手机端适配 (≤ 600px)
+   ============================================= */
+@media (max-width: 600px) {
+    .game-container { padding: 10px; }
+
+    /* 状态栏 */
+    .status-bar {
+        flex-direction: column; gap: 6px;
+        padding: 8px 12px; font-size: 12px;
+        text-align: center;
+    }
+    .status-left, .status-right { gap: 10px; }
+    .boost-badge { font-size: 10px; padding: 1px 6px; }
+
+    /* 标题 */
+    .header { padding: 14px 0 12px; margin-bottom: 12px; }
+    .header-frame { padding: 10px 20px; }
+    .header h1 { font-size: 20px; letter-spacing: 4px; }
+    .header .sub { font-size: 10px; letter-spacing: 2px; }
+    .header::before, .header::after { display: none; }
+
+    /* 故事面板 */
+    .story-panel {
+        padding: 20px 16px; min-height: 200px;
+        max-height: 45vh; font-size: 15px;
+        line-height: 1.8;
+    }
+    .story-panel .narrative p:first-of-type::first-letter {
+        font-size: 2em;
+    }
+
+    /* 选项按钮 */
+    .choices-area { flex-direction: column; gap: 8px; }
+    .choice-btn { min-width: auto; padding: 12px 14px; font-size: 13px; }
+
+    /* 输入区 */
+    .custom-area input { font-size: 14px; padding: 10px 14px; }
+    .custom-area button { padding: 10px 16px; font-size: 13px; letter-spacing: 2px; }
+
+    /* 工具栏 */
+    .toolbar { gap: 6px; }
+    .toolbar button { padding: 6px 12px; font-size: 11px; letter-spacing: 1px; }
+
+    /* 弹窗 */
+    .modal { padding: 20px 16px; width: 95%; max-width: none; }
+    .modal h3 { font-size: 16px; letter-spacing: 4px; margin-bottom: 14px; }
+    .modal label { font-size: 10px; margin: 10px 0 4px; }
+    .modal textarea { height: 90px; }
+    .modal .btn-row button { padding: 8px 20px; font-size: 13px; }
+
+    /* 商店 */
+    .shop-item { flex-wrap: wrap; padding: 12px; gap: 8px; }
+    .shop-name { font-size: 14px; }
+    .shop-desc { font-size: 11px; }
+    .shop-cost { margin: 0 8px; font-size: 13px; }
+    .shop-buy { padding: 5px 12px; font-size: 12px; }
+    .currency-big { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+
+    <!-- ====== 状态栏 ====== -->
+    <div class="status-bar">
+        <div class="status-left">
+            <div class="currency-display">
+                <span class="currency-icon">⏳</span>
+                <span id="currencyAmount">0</span>
+                <span style="font-size:11px;color:var(--text-dim)">纺锤</span>
+            </div>
+        </div>
+        <div class="status-right">
+            <span class="boost-badge" id="boostIndicator"></span>
+        </div>
+    </div>
+
+    <!-- ====== 标题 ====== -->
+    <div class="header">
+        <div class="header-frame">
+            <h1>雨 前 演 练</h1>
+            <div class="sub">Before the Rain</div>
+        </div>
+    </div>
+
+    <!-- ====== 故事区 ====== -->
+    <div class="story-panel" id="story"></div>
+
+    <!-- ====== 选项 ====== -->
+    <div class="choices-area" id="choices"></div>
+
+    <!-- ====== 输入 ====== -->
+    <div class="custom-area">
+        <input id="customInput" placeholder="输入你的行动..." autofocus />
+        <button id="customBtn">执 行</button>
+    </div>
+
+    <!-- ====== 工具栏 ====== -->
+    <div class="toolbar">
+        <button id="worldBtn">⚙ 世界观</button>
+        <button id="shopBtn" class="shop-btn">⏳ 商店</button>
+        <button id="saveBtn">💾 存档</button>
+        <button id="loadBtn">📂 读档</button>
+        <button id="resetBtn">🔄 重开</button>
+    </div>
+</div>
+
+<!-- ====== 世界观弹窗 ====== -->
+<div class="modal-overlay" id="worldModal">
+    <div class="modal">
+        <h3>世 界 观 设 定</h3>
+        <label>世界背景简述</label>
+        <textarea id="worldInput" placeholder="简要描述这个世界的核心设定……" style="height:100px;"></textarea>
+        <label>开场引导</label>
+        <input id="openingInput" placeholder="输入你想体验的开场，留空则自动生成..." />
+        <div class="btn-row">
+            <button class="btn-secondary" id="closeWorldBtn">取消</button>
+            <button class="btn-primary" id="applyWorldBtn">应用并开始</button>
+        </div>
+    </div>
+</div>
+
+<!-- ====== 商店弹窗 ====== -->
+<div class="modal-overlay" id="shopModal">
+    <div class="modal">
+        <h3>纺 锤 商 店</h3>
+        <div class="currency-big">⏳ <span id="shopCurrency">0</span> 纺锤</div>
+        <div id="shopList"></div>
+        <div class="btn-row">
+            <button class="btn-secondary" id="closeShopBtn">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// =============================================
+//  数据层
+// =============================================
+const STORY_KEY = 'game_story';
+const WORLD_KEY = 'game_world';
+const META_KEY  = 'game_meta';
+const VERSION   = 6;  // 改代码后手动 +1，自动清旧缓存
+
+// 局外养成数据
+const DEFAULT_META = {
+    currency: 0,       // 纺锤
+    totalEarned: 0,    // 累计获得
+    gamesPlayed: 0,    // 游玩次数
+    boosts: {           // 已购加成（数量=等级）
+        luck: 0,        // 幸运之星：AI 略微偏向有利结果
+        insight: 0,     // 洞察之眼：多揭示一个选项
+        charm: 0,       // 魅力之证：NPC 初始好感更高
+        resilience: 0,  // 坚韧之心：危险中存活率提升
+    },
+};
+
+// 商店商品
+const SHOP_ITEMS = [
+    { id: 'luck',       name: '金爪灵摆',   desc: '命运的天平向你倾斜，AI 倾向于更有利的叙述走向', cost: 30, icon: '✦' },
+    { id: 'insight',    name: '赤金罗盘',   desc: '关键抉择时额外揭示一条隐藏信息或第四条选项',     cost: 50, icon: '◈' },
+    { id: 'charm',      name: '双蛇权杖',   desc: '初见 NPC 时自动获得良好印象，对话更容易',       cost: 40, icon: '❦' },
+    { id: 'resilience', name: '长青剑',   desc: '面对致命危险时多一次机会，避免直接死亡结局',     cost: 60, icon: '⛊' },
+];
+
+// 运行状态（先声明，常量定义完后再初始化）
+let meta;
+let worldSetting;
+let opening;
+let history = [];
+let playing = false;
+
+function loadMeta() {
+    try {
+        const raw = localStorage.getItem(META_KEY);
+        if (raw) {
+            const saved = JSON.parse(raw);
+            // 合并默认值（兼容新增字段）
+            return { ...DEFAULT_META, ...saved, boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) } };
+        }
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_META));
+}
+
+function saveMeta() {
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+    updateStatusBar();
+}
+
+function addCurrency(amount) {
+    meta.currency += amount;
+    meta.totalEarned += amount;
+    saveMeta();
+}
+
+function spendCurrency(amount) {
+    meta.currency = Math.max(0, meta.currency - amount);
+    saveMeta();
+}
+
+// =============================================
+//  世界观：AI 模板（隐藏）+ 玩家可见简述
+// =============================================
+
+// AI 固定指令模板 —— {WORLD_LORE} 会被替换为玩家设定的世界观
+const AI_TEMPLATE = `你是互动剧本游戏的主持人（GM）。你必须将故事严格锁定在以下世界观内，不得偏离任何设定。
+
+【世界观——所有剧情必须在此框架内运行】
+{WORLD_LORE}
+
+【角色档案——性格与能力不可篡改】
+- 维尔汀："司辰"，唯一露天免疫暴雨的人类。手提箱=移动庇护所。外表冷静内心柔软，对每个被抹除者铭记于心。时序感知敏锐。
+- 斯奈德：芝加哥黑帮之女，纯粹人类无神秘术。双枪、谋略、果敢狠厉。为家族不惜一切。
+- 保利娜：来亚什基小镇平民，温柔向往安稳。已订婚。第三暴雨拼命奔逃，被抹除，仅婚戒之手留存。
+- 露西：基金会高层/指挥官。理性铁腕，机械电能系。压抑情感优先保全大局，建立暴雨观测网。
+- 圈环、伊莎贝拉：维尔汀童年挚友。活泼天真，第三暴雨双双被抹除，是维尔汀核心创伤来源。
+- 格蕾塔·霍夫曼：基金会王牌外勤，战斗力顶级。刻板严苛，外冷内热。收养马库斯后逐渐软化。
+- 海因里希：不站队任何势力的独行者。超凡时序感知，预判暴雨流向。毕生收集文明文献。
+- 马库斯：罗马尼亚孤儿院出身。解读型神秘术，可解析遗物中的历史信息。初期警惕尖锐，后期理性可靠。
+
+【硬性约束——绝对不能违反】
+1. 暴雨=雨水倒飞+时间回溯+接触者被抹除并遗忘。这是不可动摇的底层规则。
+2. 被暴雨抹除的人=彻底消失，历史痕迹都不留。只有维尔汀还记得他们存在过。
+3. 免疫暴雨的方式只有三种：维尔汀的手提箱、基金会安全堡垒、极少数天然庇护点。
+4. 人物不能无故免疫暴雨，不能随意复活被抹除者，不能跳脱时间回溯的因果逻辑。
+5. 神秘术≠万能魔法。每个神秘学家有固定术式方向，不能突然获得不相关能力。
+6. 原创角色可以登场，但不能覆盖或颠覆已有角色的核心设定。
+
+【每次生成前的自我检查】
+在动笔之前，确认：
+- 当前时代是哪一年？（暴雨回溯到了什么年代）
+- 场景中的人是否处于暴雨庇护下？（露天=危险）
+- 提到的角色是否与档案一致？（性格、能力不可改）
+- 是否有不合世界逻辑的"方便设定"？（如果有，删掉）
+
+【叙事职责】
+1. 通俗简洁，100-150字。禁止生造词和过度修饰。
+2. 关键节点用"---"分隔，其后列出3个选项（格式：1. 选项描述）。
+3. 选项需有实质差异（冒险/谨慎/对话/逃避等不同方向）。
+4. 玩家可扮演任意角色，初始能力随机但需符合世界逻辑。
+5. 适度提高难度——暴雨环境本质是残酷的，不要每次都轻松化解危机。
+
+【纺锤评分】
+每段结尾根据玩家选择质量奖励：
+平庸+2~5 / 机智+6~12 / 惊艳+13~20
+格式：在"---"前另起一行写 "[+X纺锤]"。
+
+【铁则】
+不替玩家做任何决定。始终等待选择。允许玩家输入自由行动。保持严格故事连贯。可有死亡结局——让玩家感受到"暴雨"的真正威胁。`;
+
+// 玩家可见的世界观简述（仅世界观背景，不含 AI 指令）
+const DEFAULT_WORLD_LORE = `【暴雨机制】
+"暴雨"是一种逆熵现象——雨水从地面倒飞向天空，世界整体时间线被强制回溯。露天接触雨滴的普通人或神秘学家会被直接抹除，连同其存在痕迹从历史中消失。能够免疫暴雨的是维尔汀的"手提箱"、基金会安全堡垒及少数天然庇护所。
+
+【暴雨时间线】
+1. 1999→1996：千禧年夜，油画症候。人类躯体扭曲变形如油画，激化争斗。圣洛夫基金会首遭重创。
+2. 1996→1985：电线症候。血管化为金属导线，人陷入麻痹昏迷。极北小镇来亚什基整个被时代抹除。维尔汀首次露天触雨而毫发无伤。
+3. 1987→1977：几何症候。躯体瓦解为几何碎片。维尔汀挚友圈环、伊莎贝拉被抹除，她从此成为"司辰"。
+4. →1930s：大萧条时代。海因里希大量收集文明典籍，留下关键伏笔。
+5. 1930s→1912：一战前夜。罗马尼亚孤儿院变故。格蕾塔·霍夫曼带走马库斯。
+6. 1912→1966：反常前跳。海因里希逃亡柏林存活。马库斯已在基金会堡垒。
+
+【核心人物】
+- 维尔汀（司辰）：唯一露天免疫者，手提箱内可庇护其他人。外表冷静，内心柔软，对每个被抹除者都铭记于心。
+- 格蕾塔·霍夫曼：基金会王牌外勤。外冷内热，战斗力极强，后收养马库斯。
+- 海因里希：博学的时序感知者。不站任何派系，只求保存文明记录。
+- 马库斯：孤儿院出身，解读型神秘学家，成长后为基金会重要战力。
+- 斯奈德：纯人类黑帮之女，双枪格斗，无神秘学天赋。
+- 露西：基金会理性指挥官，机械电能系神秘学家。
+
+【势力】
+- 圣洛夫基金会：人类侧对抗暴雨的核心组织，研究暴雨规律与庇护手段。
+- 重塑之手：与基金会对立的神秘学家组织（立场与目的不详）。
+- 第一防线学校：基金会旗下的封闭训练机构，维尔汀的童年牢笼。`;
+
+const DEFAULT_WORLD = DEFAULT_WORLD_LORE;  // 兼容旧引用
+
+const DEFAULT_OPENING = "游戏开始，请生成开篇场景和角色初登场，点明玩家扮演的身份，并给出3个选择。";
+
+// 初始化运行状态（常量定义完成后才能引用）
+meta = loadMeta();
+worldSetting = localStorage.getItem(WORLD_KEY) || DEFAULT_WORLD;
+opening = DEFAULT_OPENING;
+
+// =============================================
+//  构建加成提示词
+// =============================================
+function buildBoostPrompt() {
+    let text = '';
+    const b = meta.boosts;
+    if (b.luck > 0)       text += `【幸运之星 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果，概率随等级提升。\n`;
+    if (b.insight > 0)    text += `【洞察之眼 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项。\n`;
+    if (b.charm > 0)      text += `【魅力之证 Lv.${b.charm}】NPC 对玩家的初始好感度提升，对话更易获得信任。\n`;
+    if (b.resilience > 0) text += `【坚韧之心 Lv.${b.resilience}】面对致命危险时给予多一次逃生机会，避免直接死亡结局。\n`;
+    if (text) text = '【当前激活的加成】\n' + text;
+    return text;
+}
+
+// =============================================
+//  UI 更新
+// =============================================
+function updateStatusBar() {
+    document.getElementById('currencyAmount').textContent = meta.currency;
+    document.getElementById('shopCurrency').textContent = meta.currency;
+
+    // 显示已激活加成
+    const active = [];
+    for (const [key, level] of Object.entries(meta.boosts)) {
+        if (level > 0) {
+            const item = SHOP_ITEMS.find(i => i.id === key);
+            if (item) active.push(`${item.icon}${item.name} Lv.${level}`);
+        }
+    }
+    document.getElementById('boostIndicator').textContent = active.join('  ');
+}
+
+function updateShopUI() {
+    document.getElementById('shopCurrency').textContent = meta.currency;
+    const container = document.getElementById('shopList');
+    container.innerHTML = SHOP_ITEMS.map(item => {
+        const owned = meta.boosts[item.id] || 0;
+        return `
+        <div class="shop-item">
+            <div class="shop-info">
+                <div class="shop-name">${item.icon} ${item.name} ${owned > 0 ? `Lv.${owned}` : ''}</div>
+                <div class="shop-desc">${item.desc}</div>
+            </div>
+            <div class="shop-cost">⏳ ${item.cost}</div>
+            <button class="shop-buy" data-id="${item.id}"
+                ${meta.currency < item.cost ? 'disabled' : ''}
+                onclick="buyBoost('${item.id}', ${item.cost})">
+                ${owned > 0 ? '升级' : '购买'}
+            </button>
+        </div>`;
+    }).join('');
+}
+
+// =============================================
+//  商店操作
+// =============================================
+function buyBoost(id, cost) {
+    if (meta.currency < cost) return;
+    spendCurrency(cost);
+    meta.boosts[id] = (meta.boosts[id] || 0) + 1;
+    saveMeta();
+    updateShopUI();
+    updateStatusBar();
+}
+
+// =============================================
+//  渲染
+// =============================================
+const storyEl = document.getElementById('story');
+const choicesEl = document.getElementById('choices');
+
+function parseScore(text) {
+    const match = text.match(/\[\+(\d+)纺锤\]/);
+    if (match) {
+        const amount = parseInt(match[1]);
+        addCurrency(amount);
+        return { amount, text: text.replace(match[0], '') };
+    }
+    return { amount: 0, text };
+}
+
+function renderNarrative(text) {
+    const { amount, text: cleanText } = parseScore(text);
+
+    const sepIdx = cleanText.indexOf('---');
+    let narrative = cleanText;
+    let choicesText = '';
+
+    if (sepIdx !== -1) {
+        narrative = cleanText.slice(0, sepIdx).trim();
+        choicesText = cleanText.slice(sepIdx).trim();
+    }
+
+    // 叙述
+    if (narrative) {
+        const div = document.createElement('div');
+        div.className = 'narrative';
+        narrative.split('\n').filter(p => p.trim()).forEach(p => {
+            const para = document.createElement('p');
+            para.textContent = p;
+            div.appendChild(para);
+        });
+        storyEl.appendChild(div);
+    }
+
+    // 纺锤获得提示
+    if (amount > 0) {
+        const popup = document.createElement('div');
+        popup.className = 'score-popup';
+        popup.textContent = `⏳ +${amount} 纺锤`;
+        storyEl.appendChild(popup);
+        updateStatusBar();
+    }
+
+    // 选项
+    choicesEl.innerHTML = '';
+    if (choicesText) {
+        const hr = document.createElement('hr');
+        hr.className = 'divider';
+        storyEl.appendChild(hr);
+
+        const lines = choicesText.split('\n').filter(l => l.trim());
+        lines.forEach(line => {
+            const match = line.match(/^(\d+)[\.、)\s]+(.+)/);
+            if (match) {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = match[1] + '. ' + match[2].trim();
+                btn.addEventListener('click', () => makeChoice(match[2].trim()));
+                choicesEl.appendChild(btn);
+            }
+        });
+    }
+
+    storyEl.scrollTop = storyEl.scrollHeight;
+}
+
+function addLoading() {
+    const div = document.createElement('div');
+    div.className = 'narrative';
+    div.id = 'loading-indicator';
+    div.style.color = 'var(--text-dim)';
+    div.textContent = '...';
+    storyEl.appendChild(div);
+    storyEl.scrollTop = storyEl.scrollHeight;
+    return div;
+}
+
+// =============================================
+//  核心逻辑
+// =============================================
+const customInput = document.getElementById('customInput');
+const customBtn = document.getElementById('customBtn');
+
+function disableInput(v) {
+    customInput.disabled = v;
+    customBtn.disabled = v;
+    document.querySelectorAll('.choice-btn').forEach(b => b.disabled = v);
+}
+
+async function sendToAI(prompt, isSystem = false) {
+    disableInput(true);
+    const loadingEl = addLoading();
+
+    // 组装系统提示：世界观 + 加成
+    const fullSystem = AI_TEMPLATE.replace('{WORLD_LORE}', worldSetting) + '\n\n' + buildBoostPrompt();
+
+    let fullResponse = '';
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, history, system: fullSystem }),
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            fullResponse += decoder.decode(value, { stream: true });
+            loadingEl.textContent = fullResponse;
+            storyEl.scrollTop = storyEl.scrollHeight;
+        }
+    } catch (err) {
+        fullResponse = '连接失败，请确认后端已启动。';
+    }
+
+    loadingEl.remove();
+    renderNarrative(fullResponse);
+
+    if (!isSystem) {
+        history.push({ role: 'user', content: prompt });
+    }
+    history.push({ role: 'ai', content: fullResponse });
+
+    disableInput(false);
+    customInput.focus();
+}
+
+async function makeChoice(choice) {
+    disableInput(true);
+    const div = document.createElement('div');
+    div.className = 'narrative';
+    div.style.color = 'var(--gold-light)';
+    div.innerHTML = `<p>▸ ${choice}</p>`;
+    storyEl.appendChild(div);
+    choicesEl.innerHTML = '';
+    await sendToAI(choice);
+}
+
+async function customAction() {
+    const action = customInput.value.trim();
+    if (!action || playing && customInput.disabled) return;
+    customInput.value = '';
+    const div = document.createElement('div');
+    div.className = 'narrative';
+    div.style.color = 'var(--gold-light)';
+    div.innerHTML = `<p>▸ ${action}</p>`;
+    storyEl.appendChild(div);
+    choicesEl.innerHTML = '';
+    await sendToAI(action);
+}
+
+// =============================================
+//  事件绑定
+// =============================================
+customBtn.addEventListener('click', customAction);
+customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customAction(); });
+
+// 存档
+document.getElementById('saveBtn').addEventListener('click', () => {
+    const save = { worldSetting, opening, history, timestamp: new Date().toISOString() };
+    const divs = storyEl.querySelectorAll('.narrative');
+    save.storyPreview = divs.length > 0 ? divs[divs.length-1].textContent.slice(0,60)+'...' : '(新游戏)';
+    localStorage.setItem(STORY_KEY, JSON.stringify(save));
+    saveMeta();
+    alert('✅ 存档成功！');
+});
+
+// 读档
+document.getElementById('loadBtn').addEventListener('click', () => {
+    const raw = localStorage.getItem(STORY_KEY);
+    if (!raw) { alert('没有找到存档。'); return; }
+    const save = JSON.parse(raw);
+    worldSetting = save.worldSetting;
+    opening = save.opening;
+    history = save.history;
+    storyEl.innerHTML = '';
+    choicesEl.innerHTML = '';
+    history.forEach(msg => { if (msg.role === 'ai') renderNarrative(msg.content); });
+    storyEl.scrollTop = storyEl.scrollHeight;
+    playing = true;
+    alert(`📂 读档成功！（${new Date(save.timestamp).toLocaleString()}）`);
+});
+
+// 重开
+document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('确定要重新开始吗？纺锤和加成会保留，但当前剧情会丢失。')) return;
+    history = [];
+    storyEl.innerHTML = '';
+    choicesEl.innerHTML = '';
+    playing = false;
+    localStorage.removeItem(STORY_KEY);
+    document.getElementById('worldInput').value = worldSetting;
+    document.getElementById('openingInput').value = DEFAULT_OPENING;
+    document.getElementById('worldModal').classList.add('show');
+});
+
+// 世界观弹窗
+const worldModal = document.getElementById('worldModal');
+document.getElementById('worldBtn').addEventListener('click', () => {
+    document.getElementById('worldInput').value = worldSetting;
+    worldModal.classList.add('show');
+});
+document.getElementById('closeWorldBtn').addEventListener('click', () => worldModal.classList.remove('show'));
+document.getElementById('applyWorldBtn').addEventListener('click', () => {
+    worldSetting = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
+    opening = document.getElementById('openingInput').value.trim() || DEFAULT_OPENING;
+    localStorage.setItem(WORLD_KEY, worldSetting);
+    worldModal.classList.remove('show');
+    history = [];
+    storyEl.innerHTML = '';
+    choicesEl.innerHTML = '';
+    playing = true;
+    meta.gamesPlayed++;
+    saveMeta();
+    sendToAI(opening, true);
+});
+
+// 商店弹窗
+const shopModal = document.getElementById('shopModal');
+document.getElementById('shopBtn').addEventListener('click', () => {
+    updateShopUI();
+    shopModal.classList.add('show');
+});
+document.getElementById('closeShopBtn').addEventListener('click', () => shopModal.classList.remove('show'));
+
+// 快捷键
+document.addEventListener('keydown', e => {
+    if (document.getElementById('worldModal').classList.contains('show') ||
+        document.getElementById('shopModal').classList.contains('show')) return;
+    if (e.key >= '1' && e.key <= '9') {
+        const btns = choicesEl.querySelectorAll('.choice-btn');
+        const idx = parseInt(e.key) - 1;
+        if (btns[idx]) { e.preventDefault(); btns[idx].click(); }
+    }
+});
+
+// =============================================
+//  初始化
+// =============================================
+// 版本检查
+const savedVersion = localStorage.getItem('game_version');
+if (savedVersion !== String(VERSION)) {
+    localStorage.removeItem(STORY_KEY);
+    localStorage.removeItem(WORLD_KEY);
+    // 注意：不删除 META_KEY，纺锤数据跨版本保留
+    localStorage.setItem('game_version', String(VERSION));
+}
+
+updateStatusBar();
+updateShopUI();
+
+const hasSave = !!localStorage.getItem(STORY_KEY);
+if (hasSave) {
+    const save = JSON.parse(localStorage.getItem(STORY_KEY));
+    worldSetting = save.worldSetting;
+    history = save.history;
+    history.forEach(msg => { if (msg.role === 'ai') renderNarrative(msg.content); });
+    playing = true;
+    const tip = document.createElement('div');
+    tip.style.cssText = 'color:var(--text-dim);font-size:13px;text-align:center;margin-top:10px;letter-spacing:2px;';
+    tip.textContent = '已恢复上次进度 | 点击「重开」可开始新游戏';
+    storyEl.parentNode.insertBefore(tip, storyEl.nextSibling);
+} else {
+    document.getElementById('worldInput').value = worldSetting;
+    document.getElementById('openingInput').value = DEFAULT_OPENING;
+    worldModal.classList.add('show');
+    playing = true;
+}
+</script>
+</body>
+</html>
