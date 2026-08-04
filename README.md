@@ -111,3 +111,115 @@ AI 在剧情中奖励道具，存入背包。道具有效影响后续选择。
 ## License
 
 MIT
+
+---
+
+# Before the Rain · 雨前演练
+
+An interactive fiction game set in the world of *Reverse: 1999*. Play as a survivor in a timeline ravaged by the "Storm" — a mysterious phenomenon where rain falls upward and rewinds history itself.
+
+## Features
+
+- **AI-Driven Narrative**: Every choice shapes the story, powered by DeepSeek / LLM
+- **Character Creation**: Name, background, and four attributes (Insight / Charm / Combat / Lore)
+- **D20 Skill Checks**: Roll dice before decisions — critical success or failure changes everything
+- **Story Frameworks**: Built-in scenarios across multiple Storm eras
+- **Spindle Economy**: Earn currency through story performance, spend on permanent boosts
+- **Inventory System**: Collect items that influence future choices
+- **Save System**: localStorage persistence — survives refresh and restart
+- **Permadeath**: Character death clears the save but keeps progression data
+- **Streaming Output**: Real-time AI responses
+- **Mobile Responsive**: Adapts to screens under 600px
+
+## Tech Stack
+
+| Layer | Technology |
+|------|------|
+| Backend | Python · FastAPI · LangChain |
+| AI | DeepSeek API (OpenAI-compatible) |
+| Frontend | Vanilla HTML/CSS/JS · No frameworks |
+| Design | Reverse: 1999 UI aesthetic · British tweed suitcase pattern |
+
+## Getting Started
+
+```bash
+# Install dependencies
+pip install fastapi uvicorn langchain-openai langchain-core python-dotenv
+
+# Configure
+cp .env.example .env
+# Edit .env with your DeepSeek API Key
+
+# Run
+python api.py
+```
+
+Open `http://localhost:8000` in your browser.
+
+## Server Deployment
+
+```bash
+# Clone
+git clone https://gitee.com/fire-flies/beforerain.git
+cd beforerain
+
+# Setup
+cp .env.example .env && nano .env
+pip3 install fastapi uvicorn langchain-openai langchain-core python-dotenv --break-system-packages
+
+# Systemd service (auto-restart + boot persistence)
+sudo tee /etc/systemd/system/beforerain.service << 'EOF'
+[Unit]
+Description=Before Rain Game
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/beforerain
+ExecStart=/usr/bin/python3 /root/beforerain/api.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now beforerain
+```
+
+Visit `http://your-server-ip:8000`.
+
+## Project Structure
+
+```
+├── api.py              # FastAPI backend — routes + LLM proxy
+├── hub.html            # Main menu — new game / continue / shop / character
+├── game.html           # Game page — narrative / choices / dice / inventory
+├── chat.html           # Legacy chat page
+├── deepseek.py         # DeepSeek API test script
+├── .env.example        # Environment template
+└── .gitignore
+```
+
+## Game Mechanics
+
+### Attributes
+- **Insight**: Observation, lie detection, danger sense
+- **Charm**: Persuasion, disguise, earning trust
+- **Combat**: Fighting, weapons, physical contests
+- **Lore**: Arcane knowledge, artifact analysis, history
+Distribute 4 points during character creation (1-3 each).
+
+### D20 Checks
+Roll before acting: 16-20 Critical Success · 11-15 Success · 6-10 Failure · 1-5 Critical Failure. The AI narrates outcomes based on your roll.
+
+### Spindle Currency
+Earn +2~20 Spindles per story segment. Spend on permanent boosts in the shop.
+
+### Items
+The AI may reward items during the story. Items appear in your inventory and affect future choices.
+
+## License
+
+MIT
