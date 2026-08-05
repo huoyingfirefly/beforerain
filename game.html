@@ -1128,6 +1128,21 @@ function renderNarrative(text) {
     }
 
     // 冒险失败处理
+    if (dead && meta.boosts.resilience > 0) {
+        // 长青剑免死
+        meta.boosts.resilience--;
+        saveMeta();
+        dead = false;
+        const saveOverlay = document.createElement('div');
+        saveOverlay.style.cssText = `
+            text-align:center; padding:14px; margin:10px 0;
+            border:2px solid var(--accent-teal); border-radius:4px;
+            background: rgba(61,122,122,.1);
+        `;
+        saveOverlay.innerHTML = `⛊ <b style="color:var(--accent-teal)">长青剑碎裂</b>替你挡下了致命一击<br><span style="font-size:11px;color:var(--text-dim)">免死次数剩余：${meta.boosts.resilience}</span>`;
+        storyEl.appendChild(saveOverlay);
+    }
+
     if (dead) {
         SFX.death();
         const failOverlay = document.createElement('div');
