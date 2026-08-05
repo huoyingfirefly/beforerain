@@ -11,7 +11,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent
 COLLECTION_NAME = "world_lore"
 CHROMA_DIR = str(BASE_DIR / "chroma_data")
-LORE_FILE = str(BASE_DIR / "world_lore_full.md")
+LORE_FILE = str(BASE_DIR / "world_lore_full.txt")
 
 # 云端 Embedding — 优先用硅基流动(免费额度)，其次 OpenAI
 EMBED_API_KEY = os.getenv("EMBED_API_KEY", os.getenv("EMBED_API_KEY", ""))
