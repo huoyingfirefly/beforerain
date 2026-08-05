@@ -1,15 +1,17 @@
 """RAG 引擎：将世界观文档切片嵌入 ChromaDB，按需检索相关片段"""
 
 import os
+from pathlib import Path
 import chromadb
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
 
 load_dotenv()
 
+BASE_DIR = Path(__file__).parent
 COLLECTION_NAME = "world_lore"
-CHROMA_DIR = "./chroma_data"
-LORE_FILE = "world_lore_full.md"
+CHROMA_DIR = str(BASE_DIR / "chroma_data")
+LORE_FILE = str(BASE_DIR / "world_lore_full.md")
 
 # 使用 DeepSeek 兼容的 embedding
 # DeepSeek embedding API: https://api.deepseek.com/v1/embeddings
