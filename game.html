@@ -765,26 +765,24 @@ let dangerLevel = 0;
 const DANGER_MAX = 8;
 
 function checkDanger(action, response) {
-    // 危险行为关键词
-    const dangerWords = ['暴雨','接触雨','冲入雨','触雨','暴露在雨','露天','自杀','跳入','抹除','同归于尽','赴死','求死','不想活'];
-    const dangerInAction = dangerWords.some(w => action.includes(w));
-    const dangerInResponse = dangerWords.some(w => response.includes(w));
+    // 即时失败：明确作死关键词
+    const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
+    if (instantFail.some(w => action.includes(w))) {
+        dangerLevel = 0;
+        return true; // 立刻失败，不等AI
+    }
 
-    if (dangerInAction) dangerLevel += 4;
-    else if (dangerInResponse) dangerLevel += 2;
+    // 高危行为累计
+    const dangerWords = ['暴雨','露天','抹除','跳入','暴露','冲入'];
+    if (dangerWords.some(w => action.includes(w))) dangerLevel += 5;
+    if (dangerWords.some(w => response.includes(w))) dangerLevel += 3;
+    if (currentRoll && currentRoll.value <= 5) dangerLevel += 2;
 
-    // D20 大失败额外增加
-    if (action.includes('大失败') || (currentRoll && currentRoll.value <= 5)) dangerLevel += 1;
-
-    // 阈值判定
     if (dangerLevel >= DANGER_MAX) {
         const roll = Math.floor(Math.random() * 100) + 1;
-        // 超过阈值越多，失败概率越高
-        const failChance = Math.min(95, 30 + (dangerLevel - DANGER_MAX) * 20);
-        if (roll <= failChance) {
-            dangerLevel = 0;
-            return true; // 触发失败
-        }
+        const failChance = Math.min(95, 20 + dangerLevel * 10);
+        dangerLevel = 0;
+        return roll <= failChance;
     }
     return false;
 }
