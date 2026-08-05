@@ -762,33 +762,36 @@ let forcedCheckAttr = null; // 当前强制检定的属性名
 
 // 前端危险值系统——累计到阈值自动触发失败，不依赖AI
 let dangerLevel = 0;
-const DANGER_MAX = 8;
+const DANGER_MAX = 10;
 
 function checkDanger(action, response) {
     // 即时失败：明确作死关键词
     const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
     if (instantFail.some(w => action.includes(w))) {
         dangerLevel = 0;
-        return true; // 立刻失败，不等AI
+        return true;
     }
 
-    // 高危行为累计
-    const dangerWords = ['暴雨','露天','抹除','跳入','暴露','冲入'];
-    if (dangerWords.some(w => action.includes(w))) dangerLevel += 5;
-    if (dangerWords.some(w => response.includes(w))) dangerLevel += 3;
-    if (currentRoll && currentRoll.value <= 5) dangerLevel += 2;
+    // 每次回合根据AI回复中的危险信号自动累加
+    if (/暴雨/.test(response)) dangerLevel += 2;
+    if (/抹除|回溯|消失/.test(response)) dangerLevel += 2;
+    if (/受伤|重伤|流血/.test(response)) dangerLevel += 1;
 
-    if (dangerLevel >= DANGER_MAX) {
-        const roll = Math.floor(Math.random() * 100) + 1;
-        const failChance = Math.min(95, 20 + dangerLevel * 10);
-        dangerLevel = 0;
-        return roll <= failChance;
+    // D20 失败大幅增加危险
+    if (currentRoll) {
+        if (currentRoll.value <= 5) dangerLevel += 3;       // 大失败
+        else if (currentRoll.value <= 10) dangerLevel += 1; // 失败
     }
+
+    // 阈值判定：>=5就有概率，>=10极高概率
+    if (dangerLevel >= 10) { dangerLevel = 0; return true; }
+    if (dangerLevel >= 5 && Math.random() < dangerLevel * 0.08) { dangerLevel = 0; return true; }
+
     return false;
 }
 
 function resetDanger() {
-    dangerLevel = Math.max(0, dangerLevel - 3);
+    // 不再自动降低，让危险自然累积
 }
 
 function loadMeta() {
