@@ -1479,10 +1479,8 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // 世界观弹窗
 const worldModal = document.getElementById('worldModal');
 document.getElementById('worldBtn').addEventListener('click', () => {
-    if (confirm('确定返回主菜单吗？当前进度会丢失。')) {
-        saveMeta();
-        window.location.href = '/';
-    }
+    saveMeta();
+    window.location.href = '/';
 });
 document.getElementById('closeWorldBtn').addEventListener('click', () => worldModal.classList.remove('show'));
 document.getElementById('applyWorldBtn').addEventListener('click', () => {
