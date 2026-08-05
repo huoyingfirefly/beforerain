@@ -457,7 +457,7 @@ const HUB_VERSION = 1;  // 改代码后手动 +1，清缓存强制刷新
 
 const DEFAULT_META = {
     currency: 0, totalEarned: 0, gamesPlayed: 0,
-    boosts: { luck: 0, insight: 0, charm: 0, resilience: 0 },
+    boosts: { luck: 0, insight: 0, charm: 0, resilience: 0, discern: 0 },
     character: { name: '', background: '', insight: 1, charm: 1, combat: 1, lore: 1 },
     inventory: [],
     achievements: { firstGame: false, fiveGames: false, wealthy: false, rich: false, collector: false, dead: false },
@@ -469,6 +469,7 @@ const SHOP_ITEMS = [
     { id: 'insight',    name: '赤金罗盘',   desc: '每轮可多掷一次D20，取最高结果',     cost: 50, icon: '◈' },
     { id: 'charm',      name: '双蛇权杖',   desc: '初见 NPC 时自动获得良好印象，对话更容易',       cost: 40, icon: '❦' },
     { id: 'resilience', name: '长青剑',   desc: '核素浓度达10时自动消耗1层抵消（消耗品）',     cost: 60, icon: '⛊' },
+    { id: 'discern', name: '分辨善恶之果', desc: '显示三个选项中最安全的路径', cost: 240, icon: '🍎' },
 ];
 
 const DEFAULT_WORLD = `【暴雨机制】

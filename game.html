@@ -932,6 +932,8 @@ function buildBoostPrompt() {
     if (b.luck > 0)       boostText += `【金爪灵摆 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
     if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】玩家每轮可多掷${b.insight}次D20，自动取最高结果\n`;
     if (b.charm > 0)      boostText += `【双蛇权杖 Lv.${b.charm}】NPC 初始好感度提升\n`;
+    if (b.discern > 0) boostText += `【分辨善恶之果 Lv.${b.discern}】标注安全路径
+`;
     if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】核素浓度达10时自动消耗1层抵消（剩余${b.resilience}层）\n`;
     if (boostText) parts.push('【当前激活的加成】\n' + boostText);
 
@@ -1130,7 +1132,7 @@ function renderNarrative(text) {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
                 btn.textContent = match[1] + '. ' + match[2].trim();
-                if (safePath && num === safePath) {
+                if (meta.boosts.discern > 0 && safePath && num === safePath) {
                     btn.style.borderColor = 'var(--accent-teal)';
                     btn.style.background = 'rgba(61,122,122,.15)';
                     btn.textContent += ' ☢↓';
