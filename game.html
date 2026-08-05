@@ -531,7 +531,7 @@ body {
             </div>
         </div>
         <div class="status-right">
-            <span id="nuclideDisplay" style="font-size:11px;letter-spacing:1px;display:none;margin-right:10px;"></span>
+            <span id="nuclideDisplay" style="font-size:11px;letter-spacing:1px;display:none;margin-right:10px;" title="浓度≥10触发失败 | 安全场景降浓度 | 危险场景升浓度"></span>
             <span class="boost-badge" id="boostIndicator"></span>
         </div>
     </div>
@@ -772,7 +772,8 @@ function updateNuclideUI() {
     if (!el) return;
     const pct = Math.min(100, Math.round(nuclideLevel / NUCLIDE_MAX * 100));
     const color = nuclideLevel >= 8 ? 'var(--accent-red)' : nuclideLevel >= 4 ? 'var(--gold)' : 'var(--text-dim)';
-    el.innerHTML = `☢ 非对称核素浓度：<span style="color:${color};font-weight:600">${nuclideLevel}/${NUCLIDE_MAX}</span>`;
+    const ruleHint = nuclideLevel <= 0 ? '' : ' <span style="font-size:10px;color:var(--text-dim)">(安全降·危险升·≥10失败)</span>';
+    el.innerHTML = `☢ 非对称核素浓度：<span style="color:${color};font-weight:600">${nuclideLevel}/${NUCLIDE_MAX}</span>${ruleHint}`;
     el.style.display = nuclideLevel > 0 ? 'block' : 'none';
 }
 
