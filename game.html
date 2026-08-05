@@ -852,7 +852,7 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观。你只
 
 【叙事】50-120字/段，切入式开头，有冲突有张力。拒绝流水账。点明玩家身份处境。禁止在故事中提及"框架""选项""剧本"等元叙事词汇，直接开始讲述剧情。
 
-【选项——每轮必须输出】每次回复末尾必须另起一行输入三个减号---，再另起一行列出3选项（1. xxx 2. xxx 3. xxx）。无一例外。选项需有本质差异，至少1个高风险和1个审慎。忘记输出---或输出少于3个选项属于严重错误。
+【选项——每轮必须输出】每次回复末尾必须另起一行输入三个英文减号(---)，再另起一行列出3选项（1. xxx 2. xxx 3. xxx）。无一例外。选项需有本质差异，至少1个高风险和1个审慎。忘记输出---或输出少于3个选项属于严重错误。
 
 【人设】RAG角色性格/能力不可篡改，写到已知角色时必须吻合。
 
@@ -1051,7 +1051,10 @@ function parseAI(text) {
 function renderNarrative(text) {
     const { amount, item, dead, ending, forcedCheck, text: cleanText } = parseAI(text);
 
-    const sepIdx = cleanText.indexOf('---');
+    // 兼容多种分隔符：---、——、—、***
+    let sepIdx = cleanText.indexOf('---');
+    if (sepIdx === -1) sepIdx = cleanText.indexOf('——');
+    if (sepIdx === -1) sepIdx = cleanText.indexOf('***');
     let narrative = cleanText;
     let choicesText = '';
 
@@ -1101,7 +1104,7 @@ function renderNarrative(text) {
 
         const lines = choicesText.split('\n').filter(l => l.trim());
         lines.forEach(line => {
-            const match = line.match(/^(\d+)[\.、)\s]+(.+)/);
+            const match = line.match(/^\s*(\d+)\s*[\.、\)\-\s]\s*(.+)/);
             if (match) {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
