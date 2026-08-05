@@ -1342,7 +1342,8 @@ async function sendToAI(prompt, isSystem = false) {
     // 非危险回合缓慢降低危险值
     resetDanger();
     disableInput(false);
-    customInput.focus();
+    // 手机端不自动弹键盘
+    if (window.innerWidth > 600) customInput.focus();
 }
 
 async function makeChoice(choice) {
