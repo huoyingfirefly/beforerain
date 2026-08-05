@@ -1356,7 +1356,7 @@ async function makeChoice(choice) {
 
 async function customAction() {
     const action = customInput.value.trim();
-    if (!action || playing && customInput.disabled) return;
+    if (!action) return;
     customInput.value = '';
     const div = document.createElement('div');
     div.className = 'narrative';
