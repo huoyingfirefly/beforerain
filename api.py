@@ -68,9 +68,8 @@ class ChatRequest(BaseModel):
     system: str = ""
 
 
-def build_messages(prompt: str, history: list[dict], system: str):
+def build_messages(prompt: str, history: list[dict], system: str, rag_context: str = ""):
     messages = []
-    rag_context = query_world(prompt, n=8, pick=3)
     if rag_context:
         system = system + "\n\n【RAG补充世界观】\n" + rag_context
     if system:
@@ -85,17 +84,23 @@ def build_messages(prompt: str, history: list[dict], system: str):
 
 
 def stream_response(prompt: str, history: list[dict], system: str):
-    messages = build_messages(prompt, history, system)
+    # 先取 RAG 上下文（主AI和副AI共用）
+    rag_context = query_world(prompt, n=8, pick=3)
+
+    messages = build_messages(prompt, history, system, rag_context)
     full_response = ""
     for chunk in llm.stream(messages):
         if chunk.content:
             full_response += chunk.content
             yield chunk.content
 
-    # 副 AI 追加机制标记
+    # 副 AI 追加机制标记（注入世界观上下文）
     try:
+        mech_system = MECHANIC_PROMPT
+        if rag_context:
+            mech_system += "\n\n【世界观参考】\n" + rag_context[:800]
         mech_messages = [
-            SystemMessage(content=MECHANIC_PROMPT),
+            SystemMessage(content=mech_system),
             HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
         ]
         mech_resp = mechanic_llm.invoke(mech_messages)
