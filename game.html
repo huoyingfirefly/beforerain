@@ -1245,18 +1245,9 @@ function renderNarrative(text) {
         fcDiv.innerHTML = `🎲 <b style="color:var(--gold-light)">强制检定：${forcedCheck}</b><br><span style="font-size:11px;color:var(--text-dim)">必须先掷D20才能继续</span>`;
         storyEl.appendChild(fcDiv);
         forcedCheckAttr = forcedCheck;
-        customInput.disabled = true;
-        customBtn.disabled = true;
         diceBtn.style.opacity = '1';
         diceBtn.style.boxShadow = '0 0 12px var(--gold)';
         diceBtn.style.borderColor = 'var(--gold-light)';
-    }
-
-    // 每次渲染完强制解锁（强制检定场景除外）
-    if (!forcedCheckAttr) {
-        customInput.disabled = false;
-        customBtn.disabled = false;
-        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
     }
 
     storyEl.scrollTop = storyEl.scrollHeight;
