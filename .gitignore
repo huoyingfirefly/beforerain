@@ -5,3 +5,4 @@ __pycache__/
 venv/
 beforerain/
 chroma_data/
+world_lore_full.txt
