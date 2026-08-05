@@ -784,10 +784,10 @@ function checkDanger(action, response) {
         return true;
     }
 
-    // 解析副AI的核素浓度标记 [核素+X]
-    const nmatch = response.match(/\[核素\+(\d+)\]/);
+    // 解析副AI的核素浓度标记 [核素+X] 或 [核素-X]
+    const nmatch = response.match(/\[核素([+-]\d+)\]/);
     if (nmatch) {
-        nuclideLevel += parseInt(nmatch[1]);
+        nuclideLevel = Math.max(0, nuclideLevel + parseInt(nmatch[1]));
         response = response.replace(nmatch[0], '');
     }
 
