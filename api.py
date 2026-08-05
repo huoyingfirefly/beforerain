@@ -53,6 +53,8 @@ mechanic_llm = ChatOpenAI(
 
 MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记。
 
+【世界观简报】暴雨是雨水倒飞、时间回溯的灾难现象。触雨者被抹除。维尔汀是唯一露天免疫者。庇护方式仅三种：手提箱、基金会堡垒、天然庇护点。世界正被暴雨反复回溯，从1999年一路退到1966年。普通人挣扎求生，神秘学家各有专长。
+
 根据玩家行动和主AI的叙事进行判定：
 
 【纺锤评分——按以下维度逐项打分，总分=X纺锤】
@@ -69,8 +71,7 @@ MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记。
 - 躲避暴雨/接触雨水、破解机关陷阱、对抗明显强于玩家的敌人、说服关键NPC改变立场
 输出[强制检定:洞察/魅力/战斗/学识]
 
-【非对称核素浓度】根据当前场景的危险程度输出浓度变化。大多数安全场景和成功行动都应降浓度。抵达庇护所/完成任务目标/成功说服NPC：[核素-3]；成功避险/使用道具化解危机：[核素-2]；选择了安全路径/进入室内/获得庇护：[核素-1]。任何正面的阶段性进展都应有浓度下降。无事发生：[核素+0]；有风险但可控：[核素+1]；明显危险：[核素+2]；极端危险/接触暴雨：[核素+3]。浓度≥10时输出[冒险失败:死因]。浓度最低为0。
-
+【非对称核素浓度】根据场景危险程度输出：[核素-2]很安全/[核素-1]较安全/[核素+0]普通/[核素+1]有点危险/[核素+2]危险。默认大多数普通场景为[核素-1]或[核素+0]。仅明确遇到暴雨/强敌/致命陷阱才输出[核素+2]。浓度≥10时输出[冒险失败:死因]。
 【安全路径】阅读主AI给出的3个选项，从中选出最能降低风险的那一个，输出[安全路径:X]（X为选项编号1/2/3）。如果没有明显安全的选项则不输出。
 
 【胜利结算】
@@ -116,13 +117,10 @@ def stream_response(prompt: str, history: list[dict], system: str):
             full_response += chunk.content
             yield chunk.content
 
-    # 副 AI 追加机制标记（注入世界观上下文）
+    # 副 AI 追加机制标记
     try:
-        mech_system = MECHANIC_PROMPT
-        if rag_context:
-            mech_system += "\n\n【世界观参考】\n" + rag_context[:800]
         mech_messages = [
-            SystemMessage(content=mech_system),
+            SystemMessage(content=MECHANIC_PROMPT),
             HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
         ]
         mech_resp = mechanic_llm.invoke(mech_messages)
