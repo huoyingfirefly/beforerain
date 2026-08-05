@@ -777,25 +777,23 @@ function updateNuclideUI() {
 }
 
 function checkDanger(action, response) {
+    // 即时失败：明确作死关键词
     const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
     if (instantFail.some(w => action.includes(w))) {
         nuclideLevel = 0; updateNuclideUI();
         return true;
     }
 
-    if (/暴雨/.test(response)) nuclideLevel += 2;
-    if (/抹除|回溯|消失/.test(response)) nuclideLevel += 2;
-    if (/受伤|重伤|流血/.test(response)) nuclideLevel += 1;
-
-    if (currentRoll) {
-        if (currentRoll.value <= 5) nuclideLevel += 3;
-        else if (currentRoll.value <= 10) nuclideLevel += 1;
+    // 解析副AI的核素浓度标记 [核素+X]
+    const nmatch = response.match(/\[核素\+(\d+)\]/);
+    if (nmatch) {
+        nuclideLevel += parseInt(nmatch[1]);
+        response = response.replace(nmatch[0], '');
     }
 
     updateNuclideUI();
 
     if (nuclideLevel >= NUCLIDE_MAX) { nuclideLevel = 0; updateNuclideUI(); return true; }
-    if (nuclideLevel >= 5 && Math.random() < nuclideLevel * 0.08) { nuclideLevel = 0; updateNuclideUI(); return true; }
 
     return false;
 }
