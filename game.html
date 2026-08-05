@@ -1119,7 +1119,7 @@ function renderNarrative(text) {
     }
 
     // 兜底：AI 没给选项时自动补
-    if (!choicesText && choicesEl.children.length === 0 && !dead && !ending) {
+    if (choicesEl.children.length === 0 && !dead && !ending) {
         const defaults = ['环顾四周，寻找庇护所的踪迹', '低声向身边的幸存者打探情报', '检查随身物品，确认身上还有哪些可用之物'];
         defaults.forEach((text, i) => {
             const btn = document.createElement('button');
