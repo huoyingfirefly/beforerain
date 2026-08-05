@@ -1259,6 +1259,12 @@ function renderNarrative(text) {
         diceBtn.style.borderColor = 'var(--gold-light)';
     }
 
+    // 安全解锁：非强制检定状态确保输入可用
+    if (!forcedCheckAttr) {
+        customInput.disabled = false;
+        customBtn.disabled = false;
+    }
+
     storyEl.scrollTop = storyEl.scrollHeight;
 }
 
