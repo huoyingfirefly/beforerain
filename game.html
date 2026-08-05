@@ -1051,10 +1051,10 @@ function parseAI(text) {
 function renderNarrative(text) {
     const { amount, item, dead, ending, forcedCheck, text: cleanText } = parseAI(text);
 
-    // 兼容多种分隔符：---、——、—、***
+    // 仅以下三种为选项分隔符
     let sepIdx = cleanText.indexOf('---');
-    if (sepIdx === -1) sepIdx = cleanText.indexOf('——');
     if (sepIdx === -1) sepIdx = cleanText.indexOf('***');
+    if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1.');
     let narrative = cleanText;
     let choicesText = '';
 
