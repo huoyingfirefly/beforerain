@@ -14,9 +14,9 @@ CHROMA_DIR = str(BASE_DIR / "chroma_data")
 LORE_FILE = str(BASE_DIR / "world_lore_full.md")
 
 # 云端 Embedding — 优先用硅基流动(免费额度)，其次 OpenAI
-EMBED_API_KEY = os.getenv("EMBED_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
+EMBED_API_KEY = os.getenv("EMBED_API_KEY", os.getenv("EMBED_API_KEY", ""))
 EMBED_BASE_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "qwen3.7-text-embedding")
 
 _openai_ef = embedding_functions.OpenAIEmbeddingFunction(
     api_key=EMBED_API_KEY,
@@ -82,9 +82,12 @@ def index_lore(filepath: str = LORE_FILE) -> int:
     except Exception:
         pass
 
-    # 存入
-    ids = [f"chunk_{i}" for i in range(len(chunks))]
-    collection.add(documents=chunks, ids=ids)
+    # 分批存入（千问限制每次最多10条）
+    batch_size = 8
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i+batch_size]
+        ids = [f"chunk_{j}" for j in range(i, i+len(batch))]
+        collection.add(documents=batch, ids=ids)
 
     return len(chunks)
 
