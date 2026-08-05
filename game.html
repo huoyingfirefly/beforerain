@@ -743,7 +743,7 @@ const DEFAULT_META = {
 // 商店商品
 const SHOP_ITEMS = [
     { id: 'luck',       name: '金爪灵摆',   desc: '命运的天平向你倾斜，AI 倾向于更有利的叙述走向', cost: 30, icon: '✦' },
-    { id: 'insight',    name: '赤金罗盘',   desc: '关键抉择时额外揭示一条隐藏信息或第四条选项',     cost: 50, icon: '◈' },
+    { id: 'insight',    name: '赤金罗盘',   desc: '每轮可多掷一次D20，取最高结果',     cost: 50, icon: '◈' },
     { id: 'charm',      name: '双蛇权杖',   desc: '初见 NPC 时自动获得良好印象，对话更容易',       cost: 40, icon: '❦' },
     { id: 'resilience', name: '长青剑',   desc: '面对致命危险时多一次机会，避免直接死亡结局',     cost: 60, icon: '⛊' },
 ];
@@ -754,8 +754,9 @@ let worldSetting;
 let opening;
 let history = [];
 let playing = false;
-let currentRoll = null;   // 当前掷骰结果
-let diceUsed = false;     // 本轮是否已用过骰子
+let currentRoll = null;   // 当前掷骰结果 {value}
+let rollsThisRound = 0;   // 本轮已掷次数
+let maxRolls = 1;         // 本轮最大可掷次数
 
 function loadMeta() {
     try {
@@ -915,7 +916,7 @@ function buildBoostPrompt() {
     let boostText = '';
     const b = meta.boosts;
     if (b.luck > 0)       boostText += `【金爪灵摆 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
-    if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项\n`;
+    if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】玩家每轮可多掷${b.insight}次D20，自动取最高结果\n`;
     if (b.charm > 0)      boostText += `【双蛇权杖 Lv.${b.charm}】NPC 初始好感度提升\n`;
     if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】面临致命危险多一次逃生机会\n`;
     if (boostText) parts.push('【当前激活的加成】\n' + boostText);
@@ -1212,7 +1213,10 @@ async function sendToAI(prompt, isSystem = false) {
     history.push({ role: 'ai', content: fullResponse });
 
     // 重置骰子状态
-    diceUsed = false;
+    currentRoll = null;
+    rollsThisRound = 0;
+    diceResult.className = '';
+    diceResult.style.display = 'none';
     diceBtn.style.opacity = '1';
     disableInput(false);
     customInput.focus();
@@ -1252,20 +1256,30 @@ customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customActi
 const diceBtn = document.getElementById('diceBtn');
 const diceResult = document.getElementById('diceResult');
 diceBtn.addEventListener('click', () => {
-    if (customInput.disabled || diceUsed) return;
+    if (customInput.disabled) return;
+    maxRolls = 1 + meta.boosts.insight;
+    if (rollsThisRound >= maxRolls) return;
+
     diceBtn.classList.add('rolling');
     diceBtn.disabled = true;
-    diceUsed = true;
-    diceBtn.style.opacity = '0.4';
     SFX.dice();
     setTimeout(() => {
         const value = Math.floor(Math.random() * 20) + 1;
-        currentRoll = { value };
+        rollsThisRound++;
+        // 取最高值
+        if (!currentRoll || value > currentRoll.value) {
+            currentRoll = { value };
+        }
         const cls = value >= 16 ? 'dice-crit' : value <= 5 ? 'dice-fail' : '';
-        diceResult.innerHTML = `🎲 D20 = <span class="${cls}"><b>${value}</b></span>`;
+        const rerollInfo = rollsThisRound > 1 ? ` (第${rollsThisRound}掷, 最高${currentRoll.value})` : '';
+        diceResult.innerHTML = `🎲 D20 = <span class="${cls}"><b>${value}</b></span>${rerollInfo}`;
         diceResult.className = 'show';
         diceBtn.classList.remove('rolling');
         diceBtn.disabled = false;
+        // 重投次数用完则灰掉
+        if (rollsThisRound >= maxRolls) {
+            diceBtn.style.opacity = '0.4';
+        }
     }, 300);
 });
 
