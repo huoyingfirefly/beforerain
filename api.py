@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from rag_engine import query_world, is_indexed, index_lore
+from rag_lite import query_world, is_indexed, index_lore
 
 load_dotenv()
 
@@ -111,21 +111,6 @@ def chat_page():
 @app.get("/game")
 def game():
     return FileResponse(BASE_DIR / "game.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
-
-
-@app.post("/rag/reindex")
-def reindex():
-    """重建 RAG 索引"""
-    try:
-        n = index_lore()
-        return {"status": "ok", "chunks": n}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-
-@app.get("/rag/status")
-def rag_status():
-    return {"indexed": is_indexed()}
 
 
 # ---------- 启动 ----------
