@@ -1009,9 +1009,12 @@ function parseAI(text) {
     let dead = false;
 
     // 解析冒险失败 [冒险失败]（兼容旧标记[玩家死亡]）
-    if (/\[冒险失败\]|\[玩家死亡\]/.test(text)) {
+    if (/\[冒险失败[：:]?[^\]]*\]|\[玩家死亡\]/.test(text)) {
         dead = true;
-        text = text.replace(/\[冒险失败\]|\[玩家死亡\]/, '');
+        // 提取死因
+        const causeMatch = text.match(/\[冒险失败[：:]?\s*([^\]]*)\]/);
+        if (causeMatch && causeMatch[1]) dead = causeMatch[1].trim();
+        text = text.replace(/\[冒险失败[^\]]*\]|\[玩家死亡\]/, '');
     }
 
     // 解析结局 [故事结束]
@@ -1151,10 +1154,11 @@ function renderNarrative(text) {
             border:1px solid var(--accent-red); border-radius:4px;
             background: rgba(139,74,94,.1);
         `;
+        const causeText = typeof dead === 'string' ? dead : '暴雨不会怜悯任何人';
         failOverlay.innerHTML = `
             <div style="font-size:28px;margin-bottom:12px;">⏳</div>
             <div style="color:var(--accent-red);font-size:16px;letter-spacing:3px;">冒险在此终结</div>
-            <div style="color:var(--text-dim);font-size:12px;margin:8px 0 16px;">暴雨不会怜悯任何人</div>
+            <div style="color:var(--text-dim);font-size:12px;margin:8px 0 16px;">${causeText}</div>
         `;
         storyEl.appendChild(failOverlay);
         storyEl.scrollTop = storyEl.scrollHeight;
