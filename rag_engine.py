@@ -13,11 +13,15 @@ COLLECTION_NAME = "world_lore"
 CHROMA_DIR = str(BASE_DIR / "chroma_data")
 LORE_FILE = str(BASE_DIR / "world_lore_full.md")
 
-# 使用 DeepSeek Embedding API
+# 云端 Embedding — 优先用硅基流动(免费额度)，其次 OpenAI
+EMBED_API_KEY = os.getenv("EMBED_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
+EMBED_BASE_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
+
 _openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-    api_key=os.getenv("DEEPSEEK_API_KEY", ""),
-    api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com") + "/v1",
-    model_name="deepseek-chat",
+    api_key=EMBED_API_KEY,
+    api_base=EMBED_BASE_URL,
+    model_name=EMBED_MODEL,
 )
 
 
