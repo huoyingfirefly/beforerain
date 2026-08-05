@@ -1107,8 +1107,7 @@ function renderNarrative(text) {
 
         const lines = choicesText.split('\n').filter(l => l.trim());
         lines.forEach(line => {
-            // 极度宽松：任何以数字开头后跟任意分隔符的行都视为选项
-            const match = line.match(/^\s*(\d+)\D+(.+)/);
+            const match = line.match(/^\s*(\d+)\s*[.、。，,;；:：)\-]+\s*(.+)/);
             if (match) {
                 const btn = document.createElement('button');
                 btn.className = 'choice-btn';
