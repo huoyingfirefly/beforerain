@@ -1301,7 +1301,7 @@ customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customActi
 const diceBtn = document.getElementById('diceBtn');
 const diceResult = document.getElementById('diceResult');
 diceBtn.addEventListener('click', () => {
-    if (customInput.disabled) return;
+    if (customInput.disabled && !forcedCheckAttr) return;  // 强制检定时允许掷骰
     maxRolls = 1 + meta.boosts.insight;
     if (rollsThisRound >= maxRolls) return;
 
