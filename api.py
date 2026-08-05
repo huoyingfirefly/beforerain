@@ -1,18 +1,34 @@
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from rag_engine import query_world, is_indexed, index_lore
 
 load_dotenv()
 
 # 项目根目录（api.py 所在目录）
 BASE_DIR = Path(__file__).parent
 
-app = FastAPI(title="DeepSeek API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not is_indexed():
+        try:
+            n = index_lore()
+            print(f"[RAG] 已索引 {n} 个世界观片段")
+        except Exception as e:
+            print(f"[RAG] 索引失败: {e}")
+    else:
+        print("[RAG] 世界观索引已存在")
+    yield
+
+
+app = FastAPI(title="DeepSeek API", lifespan=lifespan)
 
 # ---------- CORS ----------
 app.add_middleware(
@@ -44,6 +60,10 @@ class ChatRequest(BaseModel):
 # ---------- 构建消息 ----------
 def build_messages(prompt: str, history: list[dict], system: str):
     messages = []
+    # RAG 检索：根据用户输入找最相关世界观片段
+    rag_context = query_world(prompt, n=3)
+    if rag_context:
+        system = system + "\n\n【补充世界观（RAG检索）】\n" + rag_context
     if system:
         messages.append(SystemMessage(content=system))
     for msg in history:
@@ -91,6 +111,21 @@ def chat_page():
 @app.get("/game")
 def game():
     return FileResponse(BASE_DIR / "game.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+
+@app.post("/rag/reindex")
+def reindex():
+    """重建 RAG 索引"""
+    try:
+        n = index_lore()
+        return {"status": "ok", "chunks": n}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/rag/status")
+def rag_status():
+    return {"indexed": is_indexed()}
 
 
 # ---------- 启动 ----------
