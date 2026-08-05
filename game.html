@@ -759,6 +759,8 @@ let currentRoll = null;   // 当前掷骰结果 {value}
 let rollsThisRound = 0;   // 本轮已掷次数
 let maxRolls = 1;         // 本轮最大可掷次数
 let forcedCheckAttr = null; // 当前强制检定的属性名
+let lastForcedCheck = 0;     // 上次强制检定轮次
+let roundCount = 0;          // 当前轮次计数
 
 // 前端危险值系统——累计到阈值自动触发失败，不依赖AI
 let dangerLevel = 0;
@@ -1156,8 +1158,10 @@ function renderNarrative(text) {
         setTimeout(() => { window.location.href = '/'; }, 4000);
     }
 
-    // 强制检定
-    if (forcedCheck) {
+    // 强制检定（冷却中忽略AI的强制检定标记，防止循环）
+    roundCount++;
+    if (forcedCheck && roundCount - lastForcedCheck >= 3) {
+        lastForcedCheck = roundCount;
         // 清掉已渲染的选项
         choicesEl.innerHTML = '';
         const fcDiv = document.createElement('div');
