@@ -1017,11 +1017,18 @@ function parseAI(text) {
         text = text.replace(/\[冒险失败[^\]]*\]|\[玩家死亡\]/, '');
     }
 
-    // 解析结局 [故事结束]
+    // 解析结局 [故事结束] 或 [冒险胜利]
     let ending = false;
+    let victory = false;
     if (/\[故事结束\]/.test(text)) {
         ending = true;
         text = text.replace(/\[故事结束\]/, '');
+    }
+    if (/\[冒险胜利[：:]?[^\]]*\]/.test(text)) {
+        victory = true;
+        const vMatch = text.match(/\[冒险胜利[：:]?\s*([^\]]*)\]/);
+        ending = vMatch && vMatch[1] ? vMatch[1].trim() : '你在暴雨中活了下来';
+        text = text.replace(/\[冒险胜利[^\]]*\]/, '');
     }
 
     // 解析纺锤 [+X纺锤]
@@ -1171,8 +1178,32 @@ function renderNarrative(text) {
         setTimeout(() => { window.location.href = '/'; }, 3500);
     }
 
+    // 胜利处理
+    if (victory) {
+        SFX.ending();
+        const winOverlay = document.createElement('div');
+        winOverlay.style.cssText = `
+            text-align:center; padding:24px; margin:16px 0;
+            border:2px solid var(--accent-teal); border-radius:4px;
+            background: rgba(61,122,122,.1);
+        `;
+        const winText = typeof ending === 'string' ? ending : '你在暴雨中幸存';
+        winOverlay.innerHTML = `
+            <div style="font-size:28px;margin-bottom:12px;">🏆</div>
+            <div style="color:var(--accent-teal);font-size:16px;letter-spacing:3px;">冒险胜利</div>
+            <div style="color:var(--text-dim);font-size:12px;margin:8px 0 16px;">${winText}</div>
+        `;
+        storyEl.appendChild(winOverlay);
+        storyEl.scrollTop = storyEl.scrollHeight;
+        meta.gamesPlayed++;
+        checkAchievements();
+        localStorage.removeItem(STORY_KEY);
+        saveMeta();
+        setTimeout(() => { window.location.href = '/'; }, 4000);
+    }
+
     // 结局处理
-    if (ending) {
+    if (ending && !victory) {
         SFX.ending();
         const endOverlay = document.createElement('div');
         endOverlay.style.cssText = `
