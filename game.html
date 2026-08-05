@@ -778,31 +778,17 @@ function updateNuclideUI() {
 }
 
 function checkDanger(action, response) {
-    // 即时失败：明确作死关键词
-    const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
+    const instantFail = ["自杀","赴死","求死","不想活","同归于尽","跳入暴雨","冲进暴雨","走进暴雨","触雨","接触雨滴"];
     if (instantFail.some(w => action.includes(w))) {
         nuclideLevel = 0; updateNuclideUI();
         return true;
     }
-
-    // 解析安全路径 [安全路径:X]
-    let safePath = null;
-    const smatch = response.match(/\[安全路径:(\d+)\]/);
-    if (smatch) { safePath = parseInt(smatch[1]); response = response.replace(smatch[0], ''); }
-
-    // 解析副AI的核素浓度标记 [核素+X] 或 [核素-X]
     const nmatch = response.match(/\[核素([+-]\d+)\]/);
     if (nmatch) {
         nuclideLevel = Math.max(0, nuclideLevel + parseInt(nmatch[1]));
-        response = response.replace(nmatch[0], '');
+        updateNuclideUI();
     }
-
-    return { amount, item, dead, ending, forcedCheck, safePath, text };
-
-    updateNuclideUI();
-
     if (nuclideLevel >= NUCLIDE_MAX) { nuclideLevel = 0; updateNuclideUI(); return true; }
-
     return false;
 }
 
@@ -1067,7 +1053,11 @@ function parseAI(text) {
         text = text.replace(fcMatch[0], '');
     }
 
-    return { amount, item, dead, ending, forcedCheck, text };
+        let safePath = null;
+    const smatch = text.match(/\[安全路径:(\d+)\]/);
+    if (smatch) { safePath = parseInt(smatch[1]); text = text.replace(smatch[0], ""); }
+
+return { amount, item, dead, ending, forcedCheck, text }; return { amount, item, dead, ending, forcedCheck, safePath, text };
 }
 
 function renderNarrative(text) {
