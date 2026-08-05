@@ -6,12 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from dotenv import load_dotenv
 from rag_lite import query_world, is_indexed, index_lore
 
 load_dotenv()
 
-# 项目根目录（api.py 所在目录）
 BASE_DIR = Path(__file__).parent
 
 
@@ -30,28 +30,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="DeepSeek API", lifespan=lifespan)
 
-# ---------- CORS ----------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# ---------- LLM 实例 ----------
+# 主 AI：叙事
 llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
     base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
-    temperature=1.0,
+    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+    temperature=0.7,
     streaming=True,
 )
 
-# 副 AI：仅负责判定机制（纺锤、道具、检定、失败），不写叙事
+# 副 AI：机制判定
 mechanic_llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
     base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
     temperature=0,
     streaming=False,
 )
@@ -67,22 +61,17 @@ MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记，不写任何
 只输出上述标记，不要任何解释或其他文字。"""
 
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-
-# ---------- 请求体 ----------
 class ChatRequest(BaseModel):
     prompt: str
-    history: list[dict] = []   # [{role: "user"|"ai", content: "..."}, ...]
-    system: str = ""           # 系统提示词（世界观设定）
+    history: list[dict] = []
+    system: str = ""
 
 
-# ---------- 构建消息 ----------
 def build_messages(prompt: str, history: list[dict], system: str):
     messages = []
-    # RAG 检索：根据用户输入找最相关世界观片段
-    rag_context = query_world(prompt, n=3)
+    rag_context = query_world(prompt, n=8, pick=3)
     if rag_context:
-        system = system + "\n\n【补充世界观（RAG检索）】\n" + rag_context
+        system = system + "\n\n【RAG补充世界观】\n" + rag_context
     if system:
         messages.append(SystemMessage(content=system))
     for msg in history:
@@ -94,7 +83,6 @@ def build_messages(prompt: str, history: list[dict], system: str):
     return messages
 
 
-# ---------- 流式输出 ----------
 def stream_response(prompt: str, history: list[dict], system: str):
     messages = build_messages(prompt, history, system)
     full_response = ""
@@ -103,7 +91,7 @@ def stream_response(prompt: str, history: list[dict], system: str):
             full_response += chunk.content
             yield chunk.content
 
-    # 主 AI 讲完后，副 AI 审阅并追加机制标记
+    # 副 AI 追加机制标记
     try:
         mech_messages = [
             SystemMessage(content=MECHANIC_PROMPT),
@@ -113,13 +101,11 @@ def stream_response(prompt: str, history: list[dict], system: str):
         if mech_resp.content:
             yield "\n" + mech_resp.content.strip()
     except Exception:
-        pass  # 副 AI 失败不影响主流程
+        pass
 
 
-# ---------- 接口 ----------
 @app.post("/chat")
 def chat(req: ChatRequest):
-    """流式聊天接口（支持上下文）"""
     return StreamingResponse(
         stream_response(req.prompt, req.history, req.system),
         media_type="text/plain; charset=utf-8",
@@ -146,7 +132,20 @@ def game():
     return FileResponse(BASE_DIR / "game.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
 
-# ---------- 启动 ----------
+@app.post("/rag/reindex")
+def reindex():
+    try:
+        n = index_lore()
+        return {"status": "ok", "chunks": n}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/rag/status")
+def rag_status():
+    return {"indexed": is_indexed()}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
