@@ -39,6 +39,7 @@ llm = ChatOpenAI(
     model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
     temperature=0.7,
     streaming=True,
+    max_tokens=1024,
 )
 
 # 副 AI：机制判定

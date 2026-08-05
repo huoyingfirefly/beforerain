@@ -1115,6 +1115,18 @@ function renderNarrative(text) {
         });
     }
 
+    // 兜底：AI 没给选项时自动补
+    if (choicesEl.children.length === 0 && !dead && !ending && !forcedCheck && !combatEnd) {
+        const defaults = ['继续前进，探索四周', '谨慎行事，观察情况', '尝试与附近的人交谈'];
+        defaults.forEach((text, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.textContent = (i+1) + '. ' + text;
+            btn.addEventListener('click', () => makeChoice(text));
+            choicesEl.appendChild(btn);
+        });
+    }
+
     // 冒险失败处理
     if (dead) {
         SFX.death();
