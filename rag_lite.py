@@ -1,4 +1,5 @@
 """RAG 轻量版：直接用 sqlite3 + numpy 读 ChromaDB，无需 chromadb 包"""
+import os
 import json
 import sqlite3
 import numpy as np
@@ -105,6 +106,3 @@ def is_indexed() -> bool:
 
 def index_lore() -> int:
     return -1  # rag_lite 不支持重建索引，用 chromadb 版
-
-
-import os
