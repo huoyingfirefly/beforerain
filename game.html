@@ -758,6 +758,7 @@ let playing = false;
 let currentRoll = null;   // 当前掷骰结果 {value}
 let rollsThisRound = 0;   // 本轮已掷次数
 let maxRolls = 1;         // 本轮最大可掷次数
+let forcedCheckAttr = null; // 当前强制检定的属性名
 
 function loadMeta() {
     try {
@@ -1129,6 +1130,7 @@ function renderNarrative(text) {
         `;
         fcDiv.innerHTML = `🎲 <b style="color:var(--gold-light)">强制检定：${forcedCheck}</b><br><span style="font-size:11px;color:var(--text-dim)">必须先掷D20才能继续</span>`;
         storyEl.appendChild(fcDiv);
+        forcedCheckAttr = forcedCheck;
         // 禁用选项和输入
         document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
         customInput.disabled = true;
@@ -1208,6 +1210,7 @@ async function sendToAI(prompt, isSystem = false) {
     diceBtn.style.opacity = '1';
     diceBtn.style.boxShadow = '';
     diceBtn.style.borderColor = '';
+    forcedCheckAttr = null;
     disableInput(false);
     customInput.focus();
 }
@@ -1269,6 +1272,15 @@ diceBtn.addEventListener('click', () => {
         // 重投次数用完则灰掉
         if (rollsThisRound >= maxRolls) {
             diceBtn.style.opacity = '0.4';
+        }
+        // 强制检定：掷完后自动发送
+        if (forcedCheckAttr && rollsThisRound >= maxRolls) {
+            setTimeout(() => {
+                const attr = forcedCheckAttr;
+                forcedCheckAttr = null;
+                const prompt = buildPrompt(`[检定:${attr}]`);
+                sendToAI(prompt);
+            }, 200);
         }
     }, 300);
 });
