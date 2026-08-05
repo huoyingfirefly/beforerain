@@ -365,8 +365,8 @@ body {
             <span class="btn-arrow">▸</span>
         </button>
         <button class="menu-btn" id="worldBtn">
-            <span class="btn-icon">⚙</span>
-            <span class="btn-label">世界观设定</span>
+            <span class="btn-icon">🏆</span>
+            <span class="btn-label">成就</span>
             <span class="btn-arrow">▸</span>
         </button>
     </div>
@@ -435,6 +435,17 @@ body {
     </div>
 </div>
 
+<!-- ====== 成就弹窗 ====== -->
+<div class="modal-overlay" id="achieveModal">
+    <div class="modal">
+        <h3>🏆 成 就</h3>
+        <div id="achieveList"></div>
+        <div class="btn-row">
+            <button class="btn-secondary" id="closeAchieveBtn">关闭</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // =============================================
 //  数据层
@@ -449,6 +460,8 @@ const DEFAULT_META = {
     boosts: { luck: 0, insight: 0, charm: 0, resilience: 0 },
     character: { name: '', background: '', insight: 1, charm: 1, combat: 1, lore: 1 },
     inventory: [],
+    achievements: { firstGame: false, fiveGames: false, wealthy: false, rich: false, collector: false, dead: false },
+    totalItems: 0, totalDeaths: 0,
 };
 
 const SHOP_ITEMS = [
@@ -654,15 +667,35 @@ document.getElementById('closeShopBtn').addEventListener('click', () => {
     shopModal.classList.remove('show');
 });
 
-// 世界观设定（不进游戏，只改设定）
+// 成就弹窗
+const achieveModal = document.getElementById('achieveModal');
+const ACHIEVEMENTS = [
+    { id: 'firstGame', icon: '🎭', name: '初次冒险', desc: '完成第一局游戏' },
+    { id: 'fiveGames', icon: '⭐', name: '资深玩家', desc: '完成5局游戏' },
+    { id: 'wealthy',  icon: '💰', name: '小有积蓄', desc: '累计获得50纺锤' },
+    { id: 'rich',     icon: '💎', name: '纺锤大亨', desc: '累计获得100纺锤' },
+    { id: 'collector',icon: '🎒', name: '收藏家',   desc: '收集5件不同道具' },
+    { id: 'dead',     icon: '⏳', name: '暴雨印记', desc: '经历一次死亡' },
+];
+function updateAchieveUI() {
+    const a = meta.achievements || {};
+    const list = document.getElementById('achieveList');
+    list.innerHTML = ACHIEVEMENTS.map(ac => {
+        const unlocked = a[ac.id];
+        return `<div class="shop-item" style="opacity:${unlocked?1:.4}">
+            <div class="shop-info">
+                <div class="shop-name">${ac.icon} ${ac.name} ${unlocked?'✓':''}</div>
+                <div class="shop-desc">${ac.desc}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
 document.getElementById('worldBtn').addEventListener('click', () => {
-    document.getElementById('worldInput').value = localStorage.getItem(WORLD_KEY) || DEFAULT_WORLD;
-    document.getElementById('openingInput').value = DEFAULT_OPENING;
-    // 修改按钮文字
-    const startBtn = document.getElementById('startGameBtn');
-    startBtn.textContent = '保存设定';
-    startBtn.dataset.mode = 'save-only';
-    document.getElementById('worldModal').classList.add('show');
+    updateAchieveUI();
+    achieveModal.classList.add('show');
+});
+document.getElementById('closeAchieveBtn').addEventListener('click', () => {
+    achieveModal.classList.remove('show');
 });
 
 // 注意：startGameBtn 的逻辑已统一在上方 handler 中

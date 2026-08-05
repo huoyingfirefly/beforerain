@@ -636,6 +636,17 @@ const DEFAULT_META = {
     },
     // 背包
     inventory: [],      // [{name, desc, qty}]
+    // 成就
+    achievements: {
+        firstGame: false,    // 初次冒险
+        fiveGames: false,    // 五次冒险
+        wealthy: false,      // 累计50纺锤
+        rich: false,         // 累计100纺锤
+        collector: false,    // 收集5件道具
+        dead: false,         // 经历死亡
+    },
+    totalItems: 0,     // 累计收集道具数
+    totalDeaths: 0,    // 累计死亡次数
 };
 
 // 商店商品
@@ -676,10 +687,22 @@ function saveMeta() {
     updateStatusBar();
 }
 
+// 成就检测
+function checkAchievements() {
+    const a = meta.achievements;
+    if (!a.firstGame && meta.gamesPlayed >= 1) a.firstGame = true;
+    if (!a.fiveGames && meta.gamesPlayed >= 5) a.fiveGames = true;
+    if (!a.wealthy && meta.totalEarned >= 50) a.wealthy = true;
+    if (!a.rich && meta.totalEarned >= 100) a.rich = true;
+    if (!a.collector && meta.totalItems >= 5) a.collector = true;
+    if (!a.dead && meta.totalDeaths >= 1) a.dead = true;
+}
+
 function addCurrency(amount) {
     meta.currency += amount;
     meta.totalEarned += amount;
     saveMeta();
+    checkAchievements();
 }
 
 function spendCurrency(amount) {
@@ -706,7 +729,7 @@ const AI_TEMPLATE = `你是互动剧本GM，严格遵循：
 
 【技能检定】属性1-5级：洞察(观察/识谎)、魅力(说服/伪装)、战斗(格斗/武器)、学识(神秘术/历史)。按属性判定成败融入叙事。
 
-【格式】50-80字/段，通俗无生造词。关键节点用"---"后列3选项(1. xxx)。选项需有实质差异。
+【格式】30-80字/段，通俗无生造词，避免过多无用的修饰。关键节点用"---"后列3选项(1. xxx)。选项需有实质差异。
 
 【奖励】每次必须在"---"前另起一行输出"[+X纺锤]"，X为奖励数。平庸+1~3/机智+5~8/惊艳+9~12。道具："[+道具:名|描述]"。
 
@@ -742,25 +765,10 @@ const DEFAULT_WORLD_LORE = `【暴雨机制】
 - 露西：拉普拉斯科算中心理性指挥官，外观是女性机器人，机械电能系神秘学家。
 
 【势力】
--圣洛夫基金会-St.Pavlov Foundation
-银铃摇动后的三刻以内，忠诚的伙伴们在此列队以待。
-活跃于世界各地的维和组织。神秘学家、神秘物品与神秘现象的收容与管理者。
-你可以放心地将孩子交给圣洛夫基金会，他会在这儿成为一个好孩子的。
-- 芝诺军备学院-Zeno Armaments Engineering and Technology Academy
-服从，坚定，从不退怯。
-以优补优，主张融合神秘学界武装力量与人类社会武装力量的组织。
-作为鸽子屋的常备军队活动于世界各地，同时担负着筛选与培育下一代战斗力量的责任。在《视界线公约》签署后陆续与各国签订引渡条约，接收来自于不同国家的适龄儿童，进行系统战术训练。
-- 拉普拉斯科算中心-Laplace Scientific Computing Center
-万物皆有因果，世界衔于一蛇。
-旨在深入研究未来科技以及科技和神秘术结合的学术组织，为神秘学和人类的发展提供可能。
-科算中心在几次工业革命的进程中声名鹊起，当前主要目标为推动第四次工业革命（4IR）的到来。
--重塑之手-Manus Vindictae
+-圣洛夫基金会-St.Pavlov Foundation银铃摇动后的三刻以内，忠诚的伙伴们在此列队以待。活跃于世界各地的维和组织。神秘学家、神秘物品与神秘现象的收容与管理者。你可以放心地将孩子交给圣洛夫基金会，他会在这儿成为一个好孩子的。
+- 芝诺军备学院-Zeno Armaments Engineering and Technology Academy服从，坚定，从不退怯。以优补优，主张融合神秘学界武装力量与人类社会武装力量的组织。作为鸽子屋的常备军队活动于世界各地，同时担负着筛选与培育下一代战斗力量的责任。在《视界线公约》签署后陆续与各国签订引渡条约，接收来自于不同国家的适龄儿童，进行系统战术训练。
+-重塑之手-Manus Vindictae以吾之手，塑汝之序。他们来自于漆黑的泥潭之中，无畏雨水的冲洗，以可怕的速度扩张壮大，手握能力与势力。重塑万事万物，世界予其高贵的血液与他们当有的权柄。他们为复兴而来，亦是为复仇而来。那面属于秘法与传承者们的旗帜，终将高悬于世上最高的灯塔。
 
-以吾之手，塑汝之序。
-
-他们来自于漆黑的泥潭之中，无畏雨水的冲洗，以可怕的速度扩张壮大，手握能力与势力。
-
-重塑万事万物，世界予其高贵的血液与他们当有的权柄。他们为复兴而来，亦是为复仇而来。那面属于秘法与传承者们的旗帜，终将高悬于世上最高的灯塔。
 
 【可选剧情框架——GM 在开篇时从以下框架中择一展开，框架内自由填充细节】
 【框架A：暴雨预兆｜1999年末/第1次暴雨】
@@ -811,10 +819,10 @@ function buildBoostPrompt() {
     // 加成
     let boostText = '';
     const b = meta.boosts;
-    if (b.luck > 0)       boostText += `【幸运之星 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
-    if (b.insight > 0)    boostText += `【洞察之眼 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项\n`;
-    if (b.charm > 0)      boostText += `【魅力之证 Lv.${b.charm}】NPC 初始好感度提升\n`;
-    if (b.resilience > 0) boostText += `【坚韧之心 Lv.${b.resilience}】面临致命危险多一次逃生机会\n`;
+    if (b.luck > 0)       boostText += `【金爪灵摆 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
+    if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】在关键抉择时额外提供1条隐藏信息或第4个选项\n`;
+    if (b.charm > 0)      boostText += `【双蛇权杖 Lv.${b.charm}】NPC 初始好感度提升\n`;
+    if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】面临致命危险多一次逃生机会\n`;
     if (boostText) parts.push('【当前激活的加成】\n' + boostText);
 
     return parts.join('\n\n');
@@ -827,9 +835,11 @@ function addItem(name, desc) {
         existing.qty++;
     } else {
         meta.inventory.push({ name, desc, qty: 1 });
+        meta.totalItems++;
     }
     saveMeta();
     updateInventoryUI();
+    checkAchievements();
 }
 
 // =============================================
@@ -998,6 +1008,8 @@ function renderNarrative(text) {
         storyEl.scrollTop = storyEl.scrollHeight;
 
         // 清除存档，保留 meta（纺锤和加成不丢）
+        meta.totalDeaths++;
+        checkAchievements();
         localStorage.removeItem(STORY_KEY);
         saveMeta();
 
