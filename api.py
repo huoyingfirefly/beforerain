@@ -102,8 +102,8 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
             messages.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "ai":
             messages.append(AIMessage(content=msg["content"]))
-    # 每轮强制追加选项指令
-    prompt = prompt + "\n\n[系统指令]你的回复末尾必须包含三个减号---然后列出3个选项。不输出选项游戏会中断。[/系统指令]"
+    # 每轮强制追加指令
+    prompt = prompt + "\n\n[系统指令]1.必须严格按照世界观中的框架(A-E之一)展开剧情，禁止编造框架外的身份和场景 2.回复末尾必须包含---然后列出3个选项[/系统指令]"
     messages.append(HumanMessage(content=prompt))
     return messages
 
