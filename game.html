@@ -826,7 +826,7 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观，严格
 
 【奖励——每轮必给】每次回复都必须输出”[+X纺锤]”，无一例外。X范围：平庸选择3-5/机智选择6-10/惊艳选择11-15。每3轮至少输出1次道具奖励”[+道具:名称|简短描述]”，道具应与当前场景相关。
 
-【死亡——不是可选项】以下情况强制输出”[玩家死亡]”：(1)露天接触暴雨 (2)D20大失败且相关属性≤2 (3)连续两次D20失败且未使用道具 (4)玩家主动作死。死亡后写150字后记不列选项。不得以”这只是个梦””你突然醒来”等方式反转死亡。
+【死亡——高频触发】暴雨世界中死亡是常态。以下情况必须立刻输出”[玩家死亡]”：(1)任何露天接触暴雨的场景 (2)D20结果1-5大失败 (3)连续两次任意D20失败 (4)做出明显危险选择（如无防护冲入暴雨、攻击强大敌人）。不要等到剧情结束时才给死亡——死亡可能发生在第3轮、第5轮，像真正的生存危机一样不可预测。死亡后写100字后记。禁止用”只是幻觉””原来是梦”反转。输出[玩家死亡]后立即停止，不要继续写选项或后续剧情。
 
 【题材】每次新游戏从以下随机择一贯穿：悬疑推理/生存逃亡/阵营博弈/情感羁绊/黑色幽默/史诗悲歌。
 
@@ -1186,7 +1186,13 @@ async function sendToAI(prompt, isSystem = false) {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            fullResponse += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            fullResponse += chunk;
+            // 检测到死亡标记立刻截断
+            if (/\[玩家死亡\]/.test(fullResponse)) {
+                reader.cancel();
+                break;
+            }
             loadingEl.textContent = fullResponse;
             storyEl.scrollTop = storyEl.scrollHeight;
         }
@@ -1195,6 +1201,10 @@ async function sendToAI(prompt, isSystem = false) {
     }
 
     loadingEl.remove();
+    // 截取死亡标记之前的内容
+    if (/\[玩家死亡\]/.test(fullResponse)) {
+        fullResponse = fullResponse.split('[玩家死亡]')[0] + '[玩家死亡]';
+    }
     renderNarrative(fullResponse);
 
     if (!isSystem) {
