@@ -1065,11 +1065,11 @@ function parseAI(text) {
     const smatch = text.match(/\[安全路径:(\d+)\]/);
     if (smatch) { safePath = parseInt(smatch[1]); text = text.replace(smatch[0], ""); }
 
-return { amount, item, dead, ending, forcedCheck, text }; return { amount, item, dead, ending, forcedCheck, safePath, text };
+return { amount, item, dead, ending, victory, forcedCheck, safePath, text };
 }
 
 function renderNarrative(text) {
-    const { amount, item, dead, ending, forcedCheck, safePath, text: cleanText } = parseAI(text);
+    const { amount, item, dead, ending, victory, forcedCheck, safePath, text: cleanText } = parseAI(text);
 
     // 仅以下三种为选项分隔符
     let sepIdx = cleanText.indexOf('---');
