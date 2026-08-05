@@ -872,7 +872,7 @@ const DEFAULT_WORLD_LORE = `【暴雨】雨水自地面倒飞向天空，世界�
 核心抉择：配合基金会维稳撤离/跟随重塑之手观测灾变/被时序残影滞留错过庇护窗口、
 B-你受命调查一处罕见“不可回溯地域”，此地不受暴雨抹除规则影响。你在旧城遗址勘探时，遭遇意图解析地脉秘密的科研者、誓死封存地域真相的守护者。记忆溢散症候蔓延，路人被堆叠的时代记忆压垮、意识溃散。暴雨潮汐信号持续增强，此地稳态即将被打破。
 核心抉择：协助解析地脉秘密/协助封存地域真相/放弃研究优先营救滞留平民
-C-承接马库斯带回“暴雨免疫术式情报”这条主线伏笔。基金会发现维也纳地下还留存一份海因里希未完成的术式手稿，手稿既可以庇护神秘学家，也有可能加速暴雨降临。你潜入战后时序错位的维也纳旧城区，遭遇想要销毁手稿的基金会保守派、想要补全术式的重塑之手残余信徒。欲望投射症候发作：人的内心渴求会实体化为幻象，玫瑰花园、歌剧舞台轮番在城市显现。时序屏障不断剥落，暴雨随时会重新降临维也纳旧址。
+C-承接马库斯（霍夫曼的学生，新人调查员）带回“暴雨免疫术式情报”这条主线伏笔。基金会发现维也纳地下还留存一份海因里希未完成的术式手稿，手稿既可以庇护神秘学家，也有可能加速暴雨降临。你潜入战后时序错位的维也纳旧城区，遭遇想要销毁手稿的基金会保守派、想要补全术式的重塑之手残余信徒。欲望投射症候发作：人的内心渴求会实体化为幻象，玫瑰花园、歌剧舞台轮番在城市显现。时序屏障不断剥落，暴雨随时会重新降临维也纳旧址。
 核心抉择：将手稿上交基金会封存 / 把手稿交给重塑之手余党 / 就地焚毁手稿，放弃这份对抗暴雨的可能性
 D-剧情前置：当年浸泡溪水、无意识散播魔力的祈福小木人，一部分碎片随暴雨飘散，在新春节点重新聚合，单独诞生自我意识。碎片误以为“帮人实现愿望=把人变成鹿蜀”，悄悄在周边村落复刻沛城旧事。曲娘察觉到同源灵力波动，主动追寻木人踪迹；重塑之手暗线成员盯上祥瑞人偶，企图夺取碎片制造可控畸变军队。
 专属症候【愿欲夺舍症候】：村民许下心愿后，身体被愿望反噬，逐步被动兽化。
@@ -1158,6 +1158,8 @@ function renderNarrative(text) {
 
     // 强制检定
     if (forcedCheck) {
+        // 清掉已渲染的选项
+        choicesEl.innerHTML = '';
         const fcDiv = document.createElement('div');
         fcDiv.style.cssText = `
             text-align:center; padding:14px; margin:10px 0;
@@ -1167,11 +1169,8 @@ function renderNarrative(text) {
         fcDiv.innerHTML = `🎲 <b style="color:var(--gold-light)">强制检定：${forcedCheck}</b><br><span style="font-size:11px;color:var(--text-dim)">必须先掷D20才能继续</span>`;
         storyEl.appendChild(fcDiv);
         forcedCheckAttr = forcedCheck;
-        // 禁用选项和输入
-        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
         customInput.disabled = true;
         customBtn.disabled = true;
-        // 高亮骰子按钮
         diceBtn.style.boxShadow = '0 0 12px var(--gold)';
         diceBtn.style.borderColor = 'var(--gold-light)';
     }
