@@ -780,7 +780,7 @@ function updateNuclideUI() {
 function checkDanger(action, response) {
     const instantFail = ["自杀","赴死","求死","同归于尽","跳入暴雨","冲进暴雨","走进暴雨","触雨","接触雨滴"];
     if (instantFail.some(w => action.includes(w))) { nuclideLevel = 0; updateNuclideUI(); return true; }
-    const nmatch = response.match(/[核素([+-]d+)]/);
+    const nmatch = response.match(/\[核素([+-]\d+)\]/);
     if (nmatch) { nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + parseInt(nmatch[1]))); updateNuclideUI(); }
     if (currentRoll && currentRoll.value <= 5) { nuclideLevel += 2; updateNuclideUI(); }
     if (nuclideLevel >= NUCLIDE_MAX) { nuclideLevel = 0; updateNuclideUI(); return true; }
