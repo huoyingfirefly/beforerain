@@ -92,17 +92,44 @@ def index_lore(filepath: str = LORE_FILE) -> int:
     return len(chunks)
 
 
-def query_world(query: str, n: int = 3) -> str:
-    """根据用户输入检索最相关的世界观片段，返回拼接文本"""
+def query_world(query: str, n: int = 5, max_chars: int = 1200) -> str:
+    """检索世界观片段，去重后拼接，限制总长度"""
     try:
         collection = _get_collection()
         results = collection.query(query_texts=[query], n_results=n)
         docs = results.get("documents", [[]])[0]
-        if docs:
-            return "\n\n---\n\n".join(docs)
+        if not docs:
+            return ""
+
+        # 去重：超过50%内容重叠的片段只保留第一个
+        seen = []
+        for doc in docs:
+            if not any(_overlap(doc, s) > 0.5 for s in seen):
+                seen.append(doc)
+
+        # 按长度截断，不超过 max_chars
+        result = ""
+        for doc in seen:
+            if len(result) + len(doc) + 10 > max_chars:
+                remaining = max_chars - len(result) - 10
+                if remaining > 50:
+                    result += doc[:remaining] + "..."
+                break
+            result += doc + "\n\n---\n\n"
+        return result.rstrip("\n- \n")
+
     except Exception:
-        pass
-    return ""
+        return ""
+
+
+def _overlap(a: str, b: str) -> float:
+    """估算两段文本的重叠比例"""
+    a_words = set(a[:200])  # 用前200字符做快速估算
+    b_words = set(b[:200])
+    if not a_words or not b_words:
+        return 0
+    common = len(a_words & b_words)
+    return common / max(len(a_words), len(b_words))
 
 
 def is_indexed() -> bool:
