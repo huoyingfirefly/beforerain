@@ -227,6 +227,7 @@ body {
     from { text-shadow: 0 0 20px rgba(200,164,92,.8); }
     to   { text-shadow: 0 0 0 rgba(200,164,92,0); }
 }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
 
 /* ======== 选项区 ======== */
 .choices-area {
@@ -703,7 +704,7 @@ const SFX = {
 const STORY_KEY = 'game_story';
 const WORLD_KEY = 'game_world';
 const META_KEY  = 'game_meta';
-const VERSION   = 9;  // 改代码后手动 +1，自动清旧缓存
+const VERSION   = 8;  // 改代码后手动 +1，自动清旧缓存
 
 // 局外养成数据
 const DEFAULT_META = {
@@ -757,6 +758,43 @@ let playing = false;
 let currentRoll = null;   // 当前掷骰结果 {value}
 let rollsThisRound = 0;   // 本轮已掷次数
 let maxRolls = 1;         // 本轮最大可掷次数
+let forcedCheckAttr = null; // 当前强制检定的属性名
+let lastForcedCheck = 0;     // 上次强制检定轮次
+let roundCount = 0;          // 当前轮次计数
+
+// 前端危险值系统——累计到阈值自动触发失败，不依赖AI
+let dangerLevel = 0;
+const DANGER_MAX = 10;
+
+function checkDanger(action, response) {
+    // 即时失败：明确作死关键词
+    const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
+    if (instantFail.some(w => action.includes(w))) {
+        dangerLevel = 0;
+        return true;
+    }
+
+    // 每次回合根据AI回复中的危险信号自动累加
+    if (/暴雨/.test(response)) dangerLevel += 2;
+    if (/抹除|回溯|消失/.test(response)) dangerLevel += 2;
+    if (/受伤|重伤|流血/.test(response)) dangerLevel += 1;
+
+    // D20 失败大幅增加危险
+    if (currentRoll) {
+        if (currentRoll.value <= 5) dangerLevel += 3;       // 大失败
+        else if (currentRoll.value <= 10) dangerLevel += 1; // 失败
+    }
+
+    // 阈值判定：>=5就有概率，>=10极高概率
+    if (dangerLevel >= 10) { dangerLevel = 0; return true; }
+    if (dangerLevel >= 5 && Math.random() < dangerLevel * 0.08) { dangerLevel = 0; return true; }
+
+    return false;
+}
+
+function resetDanger() {
+    // 不再自动降低，让危险自然累积
+}
 
 function loadMeta() {
     try {
@@ -808,37 +846,50 @@ function spendCurrency(amount) {
 // =============================================
 
 // AI 固定指令模板 —— {WORLD_LORE} 会被替换为玩家设定的世界观
-const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观，严格遵循：
+const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观。你只负责叙事，机制（纺锤/道具/检定/失败）由系统自动处理。
 
 【世界观】{WORLD_LORE}
 
-【叙事】50-120字/段，通俗有张力，保留悬念。关键节点用”---”后列3选项(1. xxx)。选项需有实质差异（攻击/谈判/潜行/牺牲等），鼓励高风险高回报。开头点明玩家身份与当前处境。
+【叙事】50-120字/段，切入式开头，有冲突有张力。拒绝流水账。点明玩家身份处境。
 
-【技能检定】四属性1-5级：洞察(察言观色/识破陷阱)、魅力(说服/伪装/鼓舞)、战斗(格斗/武器/体能)、学识(神秘术/典籍/历史)。高风险行动按属性+装备+环境综合判定。连续成功可给予短暂”优势”加成，连续失败可触发”危机”——额外惩罚选项。
+【选项】末尾用---后列3选项(格式:1.xx)，需有本质差异，至少1个高风险和1个审慎。
 
-【D20系统】如果有需要凭借运气检定的情况，请在结尾提醒玩家使用d20检定，玩家掷D20后据结果叙事：1-5大失败（付出沉重代价）、6-10失败（事与愿违）、11-15成功（达成目标有波折）、16-20大成功（意外收获）。洞察每高一级，最终结果+1。大成功/大失败需1-2句戏剧性描写。
+【人设】RAG角色性格/能力不可篡改，写到已知角色时必须吻合。
 
-【NPC好感】关键NPC对玩家有隐性好感度。玩家的选择与D20结果会影响NPC态度，进而改变后续选项内容与难度。
+【D20强制检定】高风险场景（躲避暴雨、破解机关、说服强敌、生死逃亡）必须在选项末尾添加"[强制检定:属性名]"，此时只给这个标记，不列选项。普通场景和战斗场景正常给3个选项并口头提醒掷骰。属性用洞察/魅力/战斗/学识之一。
 
-【资源循环】道具可影响检定结果（如”基金会徽章”在面对基金会人员时提升魅力检定）。鼓励玩家积累道具并在关键场景使用。
+【题材】本轮游戏题材已由系统随机选定，你必须严格围绕此题材展开叙事，中途不得切换。
 
-【标记】每次必须在”---”前另起一行输出”[+X纺锤]”。平庸+1~3/机智+5~8/惊艳+9~12。道具：”[+道具:名|描述]”。死亡：”[玩家死亡]”。结局：”[故事结束]”。
+【开局必读】下方是必须使用的剧情框架。每次新游戏必须从A/B/C/D/E中严格随机选一个，按框架设定展开。禁止自行编造新身份/新场景（如维也纳马车夫），必须用框架内的预设。
 
-【铁则】不替玩家决定，等选择，允许自由行动，保持连贯。35轮内收束。`;
+【铁则】不替玩家决定。35轮内收束。
+
+【框架】A-你收到基金会时序预警：局部时序开始逆流，旧时代残影现世。你在废弃复古街区排查异常时，遭遇立场相悖的重塑之手潜伏者，二者对“暴雨的意义”持完全相反的认知。解离症候在路人蔓延：个体记忆时序错乱、言行割裂错位，街区秩序逐步崩塌。基金会联络官传来临时庇护坐标，但时序震荡已封锁大半通路。
+核心抉择：配合基金会维稳撤离/跟随重塑之手观测灾变/被时序残影滞留错过庇护窗口、
+B-你受命调查一处罕见“不可回溯地域”，此地不受暴雨抹除规则影响。你在旧城遗址勘探时，遭遇意图解析地脉秘密的科研者、誓死封存地域真相的守护者。记忆溢散症候蔓延，路人被堆叠的时代记忆压垮、意识溃散。暴雨潮汐信号持续增强，此地稳态即将被打破。
+核心抉择：协助解析地脉秘密/协助封存地域真相/放弃研究优先营救滞留平民
+C-承接马库斯（霍夫曼的学生，新人调查员）带回“暴雨免疫术式情报”这条主线伏笔。基金会发现维也纳地下还留存一份海因里希未完成的术式手稿，手稿既可以庇护神秘学家，也有可能加速暴雨降临。你潜入战后时序错位的维也纳旧城区，遭遇想要销毁手稿的基金会保守派、想要补全术式的重塑之手残余信徒。欲望投射症候发作：人的内心渴求会实体化为幻象，玫瑰花园、歌剧舞台轮番在城市显现。时序屏障不断剥落，暴雨随时会重新降临维也纳旧址。
+核心抉择：将手稿上交基金会封存 / 把手稿交给重塑之手余党 / 就地焚毁手稿，放弃这份对抗暴雨的可能性
+D-剧情前置：当年浸泡溪水、无意识散播魔力的祈福小木人，一部分碎片随暴雨飘散，在新春节点重新聚合，单独诞生自我意识。碎片误以为“帮人实现愿望=把人变成鹿蜀”，悄悄在周边村落复刻沛城旧事。曲娘察觉到同源灵力波动，主动追寻木人踪迹；重塑之手暗线成员盯上祥瑞人偶，企图夺取碎片制造可控畸变军队。
+专属症候【愿欲夺舍症候】：村民许下心愿后，身体被愿望反噬，逐步被动兽化。
+对立两方：①曲娘（想要劝说小木人理解真正的祥瑞意义，温柔化解执念）；②重塑使徒（诱导木人放大力量，制造大规模神秘学家变异）。
+核心三分支抉择：1. 帮曲娘感化小木人，碎片回归曲娘身边融合 → 曲娘力量小幅恢复，补齐当年缺失的一部分记忆；2. 击溃重塑势力后销毁全部木人碎片 → 断绝隐患，但曲娘永远失去母亲遗留的祈福信物；3. 将木人碎片带回基金会研究 → 开发愿望型神秘术，却违背曲娘“自由心愿”的初心。
+E-其他符合世界观设定的原创故事，但一定要紧扣暴雨主题
+从以上框架中随意选择一个`;
 
 // 玩家可见的世界观简述（仅世界观背景，不含 AI 指令）
 const DEFAULT_WORLD_LORE = `【暴雨】雨水自地面倒飞向天空，世界时间线强制回溯。接触雨滴者被抹除，存在痕迹从历史消失。免疫仅三种：维尔汀手提箱内部、基金会安全堡垒、极少数天然庇护点。
 
 【时间线】1999→1996：千禧夜首爆，油画症候，躯体扭曲如油彩。1996→1985：电线症候，血管金属化，来亚什基小镇被完整抹除，维尔汀露天触雨确认免疫。1987→1977：几何症候，躯体碎裂为碎片，维尔汀挚友圈环与伊莎贝拉被回溯，维尔汀正式成为"司辰"。→1930s：大萧条，海因里希大量收集典籍留伏笔。1930s→1912：一战前夜，罗马尼亚孤儿院变故，霍夫曼带走马库斯。1912→1966：反常前跳，海因里希逃亡柏林。
 
-【人物】维尔汀(灰发礼帽/司辰/唯一露天免疫/手提箱庇护)、十四行诗(橘发优等生/助手)、斯奈德(芝加哥黑帮/纯人类双枪/无神秘术)、格蕾塔·霍夫曼(王牌外勤/外冷内热/收养马库斯)、海因里希(魔圈创始人/重塑之手/时序感知)、马库斯(孤儿院出身/解读型神秘术)、露西(机器人外观/科算中心指挥官/电能系)。
 
 【势力】圣洛夫基金会(维和收容/"把孩子交给我们")、芝诺军备学院(军事训练/鸽子屋常备军)、拉普拉斯科算中心(科技神秘术融合/"万物有因果")、重塑之手(秘法复兴/"以吾之手塑汝之序")、第一防线学校(封闭训练机构/暗中筛选免疫者)。
 
-【框架】A-暴雨预兆(1999/匿名信/庇护点)、B-第一防线(1987/学校实验/救学生)、C-孤儿院时钟(1912/马库斯觉醒/霍夫曼到访)。`;
+`;
 const DEFAULT_WORLD = DEFAULT_WORLD_LORE;  // 兼容旧引用
 
-const DEFAULT_OPENING = "游戏开始，请生成开篇场景和角色初登场，点明玩家扮演的身份，并给出3个选择。";
+const GENRES = ['悬疑推理','生存逃亡','阵营博弈','情感羁绊','黑色幽默','史诗悲歌','谍战暗线','探险考古','孤岛求生'];
+const DEFAULT_OPENING = "游戏开始。从框架A/B/C/D/E中随机选一个，严格按照该框架的开场设定来生成开篇场景，点明玩家身份（必须是该框架预设的身份），并给出3个选择。禁止使用维也纳马车夫或其他框架外的身份。";
 
 // 初始化运行状态（常量定义完成后才能引用）
 meta = loadMeta();
@@ -957,10 +1008,10 @@ function parseAI(text) {
     let item = null;
     let dead = false;
 
-    // 解析死亡 [玩家死亡]
-    if (/\[玩家死亡\]/.test(text)) {
+    // 解析冒险失败 [冒险失败]（兼容旧标记[玩家死亡]）
+    if (/\[冒险失败\]|\[玩家死亡\]/.test(text)) {
         dead = true;
-        text = text.replace(/\[玩家死亡\]/, '');
+        text = text.replace(/\[冒险失败\]|\[玩家死亡\]/, '');
     }
 
     // 解析结局 [故事结束]
@@ -986,11 +1037,19 @@ function parseAI(text) {
         text = text.replace(itemMatch[0], '');
     }
 
-    return { amount, item, dead, ending, text };
+    // 解析强制检定 [强制检定:属性]
+    let forcedCheck = null;
+    const fcMatch = text.match(/\[强制检定:([^\]]+)\]/);
+    if (fcMatch) {
+        forcedCheck = fcMatch[1].trim();
+        text = text.replace(fcMatch[0], '');
+    }
+
+    return { amount, item, dead, ending, forcedCheck, text };
 }
 
 function renderNarrative(text) {
-    const { amount, item, dead, ending, text: cleanText } = parseAI(text);
+    const { amount, item, dead, ending, forcedCheck, text: cleanText } = parseAI(text);
 
     const sepIdx = cleanText.indexOf('---');
     let narrative = cleanText;
@@ -1053,30 +1112,28 @@ function renderNarrative(text) {
         });
     }
 
-    // 死亡处理
+    // 冒险失败处理
     if (dead) {
         SFX.death();
-        const deathOverlay = document.createElement('div');
-        deathOverlay.style.cssText = `
+        const failOverlay = document.createElement('div');
+        failOverlay.style.cssText = `
             text-align:center; padding:24px; margin:16px 0;
             border:1px solid var(--accent-red); border-radius:4px;
             background: rgba(139,74,94,.1);
         `;
-        deathOverlay.innerHTML = `
+        failOverlay.innerHTML = `
             <div style="font-size:28px;margin-bottom:12px;">⏳</div>
-            <div style="color:var(--accent-red);font-size:16px;letter-spacing:3px;">你已被暴雨抹除</div>
-            <div style="color:var(--text-dim);font-size:12px;margin:8px 0 16px;">存在痕迹消散，唯有司辰记得</div>
+            <div style="color:var(--accent-red);font-size:16px;letter-spacing:3px;">冒险在此终结</div>
+            <div style="color:var(--text-dim);font-size:12px;margin:8px 0 16px;">暴雨不会怜悯任何人</div>
         `;
-        storyEl.appendChild(deathOverlay);
+        storyEl.appendChild(failOverlay);
         storyEl.scrollTop = storyEl.scrollHeight;
 
-        // 清除存档，保留 meta（纺锤和加成不丢）
         meta.totalDeaths++;
         checkAchievements();
         localStorage.removeItem(STORY_KEY);
         saveMeta();
 
-        // 3 秒后返回主界面
         setTimeout(() => { window.location.href = '/'; }, 3500);
     }
 
@@ -1105,6 +1162,27 @@ function renderNarrative(text) {
 
         // 4 秒后返回主界面
         setTimeout(() => { window.location.href = '/'; }, 4000);
+    }
+
+    // 强制检定（冷却中忽略AI的强制检定标记，防止循环）
+    roundCount++;
+    if (forcedCheck && roundCount - lastForcedCheck >= 3) {
+        lastForcedCheck = roundCount;
+        // 清掉已渲染的选项
+        choicesEl.innerHTML = '';
+        const fcDiv = document.createElement('div');
+        fcDiv.style.cssText = `
+            text-align:center; padding:14px; margin:10px 0;
+            border:2px dashed var(--gold); border-radius:4px;
+            background: rgba(200,164,92,.1); animation: pulse 1s infinite;
+        `;
+        fcDiv.innerHTML = `🎲 <b style="color:var(--gold-light)">强制检定：${forcedCheck}</b><br><span style="font-size:11px;color:var(--text-dim)">必须先掷D20才能继续</span>`;
+        storyEl.appendChild(fcDiv);
+        forcedCheckAttr = forcedCheck;
+        customInput.disabled = true;
+        customBtn.disabled = true;
+        diceBtn.style.boxShadow = '0 0 12px var(--gold)';
+        diceBtn.style.borderColor = 'var(--gold-light)';
     }
 
     storyEl.scrollTop = storyEl.scrollHeight;
@@ -1153,7 +1231,13 @@ async function sendToAI(prompt, isSystem = false) {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            fullResponse += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            fullResponse += chunk;
+            // 检测到失败标记立刻截断
+            if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
+                reader.cancel();
+                break;
+            }
             loadingEl.textContent = fullResponse;
             storyEl.scrollTop = storyEl.scrollHeight;
         }
@@ -1162,6 +1246,15 @@ async function sendToAI(prompt, isSystem = false) {
     }
 
     loadingEl.remove();
+
+    // 前端危险判定：覆盖AI的“不死之身”
+    if (checkDanger(prompt, fullResponse)) {
+        fullResponse = '冒险失败——暴雨不会永远给予侥幸。[冒险失败]';
+    }
+
+    if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
+        fullResponse = fullResponse.split(/\[冒险失败\]|\[玩家死亡\]/)[0] + '[冒险失败]';
+    }
     renderNarrative(fullResponse);
 
     if (!isSystem) {
@@ -1175,6 +1268,11 @@ async function sendToAI(prompt, isSystem = false) {
     diceResult.className = '';
     diceResult.style.display = 'none';
     diceBtn.style.opacity = '1';
+    diceBtn.style.boxShadow = '';
+    diceBtn.style.borderColor = '';
+    forcedCheckAttr = null;
+    // 非危险回合缓慢降低危险值
+    resetDanger();
     disableInput(false);
     customInput.focus();
 }
@@ -1213,7 +1311,7 @@ customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customActi
 const diceBtn = document.getElementById('diceBtn');
 const diceResult = document.getElementById('diceResult');
 diceBtn.addEventListener('click', () => {
-    if (customInput.disabled) return;
+    if (customInput.disabled && !forcedCheckAttr) return;  // 强制检定时允许掷骰
     maxRolls = 1 + meta.boosts.insight;
     if (rollsThisRound >= maxRolls) return;
 
@@ -1236,6 +1334,12 @@ diceBtn.addEventListener('click', () => {
         // 重投次数用完则灰掉
         if (rollsThisRound >= maxRolls) {
             diceBtn.style.opacity = '0.4';
+        }
+        // 强制检定：掷完后立即发送
+        if (forcedCheckAttr && rollsThisRound >= maxRolls) {
+            const attr = forcedCheckAttr;
+            forcedCheckAttr = null;
+            sendToAI(buildPrompt(`[检定:${attr}]`));
         }
     }, 300);
 });
@@ -1317,7 +1421,8 @@ document.getElementById('applyWorldBtn').addEventListener('click', () => {
     playing = true;
     meta.gamesPlayed++;
     saveMeta();
-    sendToAI(opening, true);
+    const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
+    sendToAI(`[题材:${genre}] ${opening}`, true);
 });
 
 // 商店弹窗
