@@ -754,7 +754,8 @@ let worldSetting;
 let opening;
 let history = [];
 let playing = false;
-let currentRoll = null;  // 当前掷骰结果 {value, attr}
+let currentRoll = null;   // 当前掷骰结果
+let diceUsed = false;     // 本轮是否已用过骰子
 
 function loadMeta() {
     try {
@@ -1210,6 +1211,9 @@ async function sendToAI(prompt, isSystem = false) {
     }
     history.push({ role: 'ai', content: fullResponse });
 
+    // 重置骰子状态
+    diceUsed = false;
+    diceBtn.style.opacity = '1';
     disableInput(false);
     customInput.focus();
 }
@@ -1248,9 +1252,11 @@ customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customActi
 const diceBtn = document.getElementById('diceBtn');
 const diceResult = document.getElementById('diceResult');
 diceBtn.addEventListener('click', () => {
-    if (customInput.disabled) return;
+    if (customInput.disabled || diceUsed) return;
     diceBtn.classList.add('rolling');
     diceBtn.disabled = true;
+    diceUsed = true;
+    diceBtn.style.opacity = '0.4';
     SFX.dice();
     setTimeout(() => {
         const value = Math.floor(Math.random() * 20) + 1;
