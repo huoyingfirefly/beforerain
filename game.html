@@ -558,7 +558,7 @@ body {
 
     <!-- ====== 工具栏 ====== -->
     <div class="toolbar">
-        <button id="worldBtn">⚙ 世界观</button>
+        <button id="worldBtn">🏠 主菜单</button>
         <button id="invBtn">📦 背包</button>
         <button id="shopBtn" class="shop-btn">⏳ 商店</button>
         <button id="saveBtn">💾 存档</button>
@@ -1323,8 +1323,10 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // 世界观弹窗
 const worldModal = document.getElementById('worldModal');
 document.getElementById('worldBtn').addEventListener('click', () => {
-    document.getElementById('worldInput').value = worldSetting;
-    worldModal.classList.add('show');
+    if (confirm('确定返回主菜单吗？当前进度会丢失。')) {
+        saveMeta();
+        window.location.href = '/';
+    }
 });
 document.getElementById('closeWorldBtn').addEventListener('click', () => worldModal.classList.remove('show'));
 document.getElementById('applyWorldBtn').addEventListener('click', () => {
