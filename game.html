@@ -1254,10 +1254,11 @@ function renderNarrative(text) {
         diceBtn.style.borderColor = 'var(--gold-light)';
     }
 
-    // 安全解锁：非强制检定状态确保输入可用
+    // 每次渲染完强制解锁（强制检定场景除外）
     if (!forcedCheckAttr) {
         customInput.disabled = false;
         customBtn.disabled = false;
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = false);
     }
 
     storyEl.scrollTop = storyEl.scrollHeight;
@@ -1382,6 +1383,7 @@ async function customAction() {
 // =============================================
 customBtn.addEventListener('click', customAction);
 customInput.addEventListener('keydown', e => { if (e.key === 'Enter') customAction(); });
+customInput.addEventListener('click', () => { if (!forcedCheckAttr) customInput.disabled = false; });
 
 // 骰子按钮
 const diceBtn = document.getElementById('diceBtn');
