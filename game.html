@@ -1350,11 +1350,16 @@ diceBtn.addEventListener('click', () => {
         if (rollsThisRound >= maxRolls) {
             diceBtn.style.opacity = '0.4';
         }
-        // 强制检定：掷完后立即发送
-        if (forcedCheckAttr && rollsThisRound >= maxRolls) {
-            const attr = forcedCheckAttr;
-            forcedCheckAttr = null;
-            sendToAI(buildPrompt(`[检定:${attr}]`));
+        // 所有场景掷骰完毕自动发送
+        if (rollsThisRound >= maxRolls) {
+            setTimeout(() => {
+                if (!currentRoll) return;
+                const roll = currentRoll;
+                // 选项和输入都被禁用时才自动发送（强制检定模式）
+                if (customInput.disabled || choicesEl.children.length === 0) {
+                    sendToAI(buildPrompt('[D20检定]'));
+                }
+            }, 500);
         }
     }, 300);
 });
