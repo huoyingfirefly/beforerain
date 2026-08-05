@@ -760,6 +760,39 @@ let rollsThisRound = 0;   // 本轮已掷次数
 let maxRolls = 1;         // 本轮最大可掷次数
 let forcedCheckAttr = null; // 当前强制检定的属性名
 
+// 前端危险值系统——累计到阈值自动触发失败，不依赖AI
+let dangerLevel = 0;
+const DANGER_MAX = 8;
+
+function checkDanger(action, response) {
+    // 危险行为关键词
+    const dangerWords = ['暴雨','接触雨','冲入雨','触雨','暴露在雨','露天','自杀','跳入','抹除','同归于尽','赴死','求死','不想活'];
+    const dangerInAction = dangerWords.some(w => action.includes(w));
+    const dangerInResponse = dangerWords.some(w => response.includes(w));
+
+    if (dangerInAction) dangerLevel += 4;
+    else if (dangerInResponse) dangerLevel += 2;
+
+    // D20 大失败额外增加
+    if (action.includes('大失败') || (currentRoll && currentRoll.value <= 5)) dangerLevel += 1;
+
+    // 阈值判定
+    if (dangerLevel >= DANGER_MAX) {
+        const roll = Math.floor(Math.random() * 100) + 1;
+        // 超过阈值越多，失败概率越高
+        const failChance = Math.min(95, 30 + (dangerLevel - DANGER_MAX) * 20);
+        if (roll <= failChance) {
+            dangerLevel = 0;
+            return true; // 触发失败
+        }
+    }
+    return false;
+}
+
+function resetDanger() {
+    dangerLevel = Math.max(0, dangerLevel - 3);
+}
+
 function loadMeta() {
     try {
         const raw = localStorage.getItem(META_KEY);
@@ -826,15 +859,7 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观，严格
 
 【奖励——每轮必给】每次回复都必须输出”[+X纺锤]”，无一例外。X范围：平庸选择3-5/机智选择6-10/惊艳选择11-15。每3轮至少输出1次道具奖励”[+道具:名称|简短描述]”，道具应与当前场景相关。
 
-【冒险失败——必须高频触发】暴雨世界中冒险随时会失败。在以下每种情况出现时，你必须模拟D100决定是否触发失败结局：
-
-(1) 露天接触暴雨 → 失败率95%（1-95失败，96-100侥幸）
-(2) D20大失败(1-5) → 失败率80%
-(3) D20失败(6-10)且属性≤2 → 失败率60%
-(4) 明显危险行为 → 失败率90%
-(5) 连续两轮保守 → 暴雨加速，下轮失败率翻倍
-
-触发失败后立刻输出”[冒险失败]”+100字结局叙述（角色被暴雨抹除/被敌人捕获/被时间乱流吞没），不写选项。失败可能在第2轮就发生——这就是暴雨世界的残酷。禁止用”侥幸逃脱””原来是梦”等方式反转。
+【冒险失败】当玩家做出极端危险行为（冲入暴雨、主动赴死等）或剧情逻辑上无可挽回时，输出”[冒险失败]”+结局叙述，不写选项。不要用侥幸反转。
 
 【题材】每次新游戏从以下随机择一贯穿：悬疑推理/生存逃亡/阵营博弈/情感羁绊/黑色幽默/史诗悲歌。
 
@@ -1207,6 +1232,12 @@ async function sendToAI(prompt, isSystem = false) {
     }
 
     loadingEl.remove();
+
+    // 前端危险判定：覆盖AI的“不死之身”
+    if (checkDanger(prompt, fullResponse)) {
+        fullResponse = '冒险失败——暴雨不会永远给予侥幸。[冒险失败]';
+    }
+
     if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
         fullResponse = fullResponse.split(/\[冒险失败\]|\[玩家死亡\]/)[0] + '[冒险失败]';
     }
@@ -1226,6 +1257,8 @@ async function sendToAI(prompt, isSystem = false) {
     diceBtn.style.boxShadow = '';
     diceBtn.style.borderColor = '';
     forcedCheckAttr = null;
+    // 非危险回合缓慢降低危险值
+    resetDanger();
     disableInput(false);
     customInput.focus();
 }
