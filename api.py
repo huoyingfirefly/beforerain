@@ -47,6 +47,25 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
+# 副 AI：仅负责判定机制（纺锤、道具、检定、失败），不写叙事
+mechanic_llm = ChatOpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+    model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+    temperature=0,
+    streaming=False,
+)
+
+MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记，不写任何叙事文字。
+
+根据以下交互内容判定并输出：
+1. 纺锤奖励：[+X纺锤]，平庸1-3/机智5-8/惊艳9-12。每轮必须给。
+2. 道具：[+道具:名|描述]，每3轮至少1次。
+3. 强制检定：[强制检定:属性名]，仅极端危险场景。
+4. 失败结局：[冒险失败]，仅露天触暴雨/D20大失败叠加低属性/明确作死。
+
+只输出上述标记，不要任何解释或其他文字。"""
+
 
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -78,9 +97,23 @@ def build_messages(prompt: str, history: list[dict], system: str):
 # ---------- 流式输出 ----------
 def stream_response(prompt: str, history: list[dict], system: str):
     messages = build_messages(prompt, history, system)
+    full_response = ""
     for chunk in llm.stream(messages):
         if chunk.content:
+            full_response += chunk.content
             yield chunk.content
+
+    # 主 AI 讲完后，副 AI 审阅并追加机制标记
+    try:
+        mech_messages = [
+            SystemMessage(content=MECHANIC_PROMPT),
+            HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
+        ]
+        mech_resp = mechanic_llm.invoke(mech_messages)
+        if mech_resp.content:
+            yield "\n" + mech_resp.content.strip()
+    except Exception:
+        pass  # 副 AI 失败不影响主流程
 
 
 # ---------- 接口 ----------
