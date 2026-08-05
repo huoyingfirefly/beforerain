@@ -1496,6 +1496,7 @@ document.getElementById('applyWorldBtn').addEventListener('click', () => {
     meta.gamesPlayed++;
     saveMeta();
     const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
+    alert('☢ 非对称核素浓度\n\n安全行动→浓度下降 | 危险场景→浓度上升\n浓度≥10→触发失败 | 长青剑可抵消\n状态栏实时显示：绿色安全·金色警戒·红色濒危');
     sendToAI(`[题材:${genre}] ${opening}`, true);
 });
 
