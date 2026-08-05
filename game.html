@@ -763,38 +763,43 @@ let lastForcedCheck = 0;     // 上次强制检定轮次
 let roundCount = 0;          // 当前轮次计数
 
 // 前端危险值系统——累计到阈值自动触发失败，不依赖AI
-let dangerLevel = 0;
-const DANGER_MAX = 10;
+let nuclideLevel = 0;      // 非对称核素浓度
+const NUCLIDE_MAX = 10;
+
+function updateNuclideUI() {
+    const el = document.getElementById('nuclideDisplay');
+    if (!el) return;
+    const pct = Math.min(100, Math.round(nuclideLevel / NUCLIDE_MAX * 100));
+    const color = nuclideLevel >= 8 ? 'var(--accent-red)' : nuclideLevel >= 4 ? 'var(--gold)' : 'var(--text-dim)';
+    el.innerHTML = `☢ 非对称核素浓度：<span style="color:${color};font-weight:600">${nuclideLevel}/${NUCLIDE_MAX}</span>`;
+    el.style.display = nuclideLevel > 0 ? 'block' : 'none';
+}
 
 function checkDanger(action, response) {
-    // 即时失败：明确作死关键词
     const instantFail = ['自杀','赴死','求死','不想活','同归于尽','跳入暴雨','冲进暴雨','走进暴雨','触雨','接触雨滴'];
     if (instantFail.some(w => action.includes(w))) {
-        dangerLevel = 0;
+        nuclideLevel = 0; updateNuclideUI();
         return true;
     }
 
-    // 每次回合根据AI回复中的危险信号自动累加
-    if (/暴雨/.test(response)) dangerLevel += 2;
-    if (/抹除|回溯|消失/.test(response)) dangerLevel += 2;
-    if (/受伤|重伤|流血/.test(response)) dangerLevel += 1;
+    if (/暴雨/.test(response)) nuclideLevel += 2;
+    if (/抹除|回溯|消失/.test(response)) nuclideLevel += 2;
+    if (/受伤|重伤|流血/.test(response)) nuclideLevel += 1;
 
-    // D20 失败大幅增加危险
     if (currentRoll) {
-        if (currentRoll.value <= 5) dangerLevel += 3;       // 大失败
-        else if (currentRoll.value <= 10) dangerLevel += 1; // 失败
+        if (currentRoll.value <= 5) nuclideLevel += 3;
+        else if (currentRoll.value <= 10) nuclideLevel += 1;
     }
 
-    // 阈值判定：>=5就有概率，>=10极高概率
-    if (dangerLevel >= 10) { dangerLevel = 0; return true; }
-    if (dangerLevel >= 5 && Math.random() < dangerLevel * 0.08) { dangerLevel = 0; return true; }
+    updateNuclideUI();
+
+    if (nuclideLevel >= NUCLIDE_MAX) { nuclideLevel = 0; updateNuclideUI(); return true; }
+    if (nuclideLevel >= 5 && Math.random() < nuclideLevel * 0.08) { nuclideLevel = 0; updateNuclideUI(); return true; }
 
     return false;
 }
 
-function resetDanger() {
-    // 不再自动降低，让危险自然累积
-}
+function resetDanger() {}
 
 function loadMeta() {
     try {
