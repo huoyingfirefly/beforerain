@@ -1039,7 +1039,7 @@ function parseAI(text) {
 
     // 解析强制检定 [强制检定:属性]
     let forcedCheck = null;
-    const fcMatch = text.match(/\[强制检定:([^\]]+)\]/);
+    const fcMatch = text.match(/\[强制检定[：:]([^\]]+)\]/);
     if (fcMatch) {
         forcedCheck = fcMatch[1].trim();
         text = text.replace(fcMatch[0], '');
