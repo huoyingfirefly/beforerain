@@ -607,6 +607,97 @@ body {
 
 <script>
 // =============================================
+//  音效系统 (Web Audio API 合成)
+// =============================================
+const SFX = {
+    ctx: null,
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+    play(type) {
+        this.init();
+        const ctx = this.ctx;
+        const now = ctx.currentTime;
+        const g = ctx.createGain();
+        g.connect(ctx.destination);
+
+        if (type === 'dice') {
+            // 快速短促的咔嗒声
+            for (let i = 0; i < 5; i++) {
+                const o = ctx.createOscillator();
+                const gg = ctx.createGain();
+                o.connect(gg); gg.connect(ctx.destination);
+                o.type = 'triangle';
+                o.frequency.value = 200 + Math.random() * 600;
+                gg.gain.setValueAtTime(0.08, now + i * 0.04);
+                gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.04 + 0.06);
+                o.start(now + i * 0.04); o.stop(now + i * 0.04 + 0.06);
+            }
+        } else if (type === 'coin') {
+            // 清脆叮当
+            const o = ctx.createOscillator();
+            o.connect(g);
+            o.type = 'sine';
+            o.frequency.setValueAtTime(880, now);
+            o.frequency.setValueAtTime(1100, now + 0.06);
+            g.gain.setValueAtTime(0.15, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            o.start(now); o.stop(now + 0.2);
+        } else if (type === 'achieve') {
+            // 双音叮咚
+            [523, 784].forEach((freq, i) => {
+                const o = ctx.createOscillator();
+                const gg = ctx.createGain();
+                o.connect(gg); gg.connect(ctx.destination);
+                o.type = 'sine';
+                o.frequency.value = freq;
+                gg.gain.setValueAtTime(0.12, now + i * 0.12);
+                gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+                o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.3);
+            });
+        } else if (type === 'death') {
+            // 低沉的消逝音
+            const o = ctx.createOscillator();
+            o.connect(g);
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(200, now);
+            o.frequency.exponentialRampToValueAtTime(40, now + 1.5);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.linearRampToValueAtTime(0, now + 1.5);
+            o.start(now); o.stop(now + 1.5);
+        } else if (type === 'ending') {
+            // 温暖的C大调和弦
+            [262, 330, 392, 523].forEach((freq, i) => {
+                const o = ctx.createOscillator();
+                const gg = ctx.createGain();
+                o.connect(gg); gg.connect(ctx.destination);
+                o.type = 'sine';
+                o.frequency.value = freq;
+                gg.gain.setValueAtTime(0.06, now + i * 0.15);
+                gg.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 1.5);
+                o.start(now + i * 0.15); o.stop(now + i * 0.15 + 1.5);
+            });
+        } else if (type === 'item') {
+            // 轻快拾取音
+            const o = ctx.createOscillator();
+            o.connect(g);
+            o.type = 'sine';
+            o.frequency.setValueAtTime(600, now);
+            o.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            o.start(now); o.stop(now + 0.15);
+        }
+    },
+    dice() { this.play('dice'); },
+    coin() { this.play('coin'); },
+    achieve() { this.play('achieve'); },
+    death() { this.play('death'); },
+    ending() { this.play('ending'); },
+    item() { this.play('item'); },
+};
+
+// =============================================
 //  数据层
 // =============================================
 const STORY_KEY = 'game_story';
@@ -965,6 +1056,7 @@ function renderNarrative(text) {
 
     // 纺锤获得提示
     if (amount > 0) {
+        SFX.coin();
         const popup = document.createElement('div');
         popup.className = 'score-popup';
         popup.textContent = `⏳ +${amount} 纺锤`;
@@ -974,6 +1066,7 @@ function renderNarrative(text) {
 
     // 道具获得提示
     if (item) {
+        SFX.item();
         const popup = document.createElement('div');
         popup.className = 'score-popup';
         popup.style.color = 'var(--accent-teal)';
@@ -1003,6 +1096,7 @@ function renderNarrative(text) {
 
     // 死亡处理
     if (dead) {
+        SFX.death();
         const deathOverlay = document.createElement('div');
         deathOverlay.style.cssText = `
             text-align:center; padding:24px; margin:16px 0;
@@ -1029,6 +1123,7 @@ function renderNarrative(text) {
 
     // 结局处理
     if (ending) {
+        SFX.ending();
         const endOverlay = document.createElement('div');
         endOverlay.style.cssText = `
             text-align:center; padding:24px; margin:16px 0;
@@ -1156,6 +1251,7 @@ diceBtn.addEventListener('click', () => {
     if (customInput.disabled) return;
     diceBtn.classList.add('rolling');
     diceBtn.disabled = true;
+    SFX.dice();
     setTimeout(() => {
         const value = Math.floor(Math.random() * 20) + 1;
         currentRoll = { value };
