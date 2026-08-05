@@ -551,7 +551,7 @@ body {
 
     <!-- ====== 输入 ====== -->
     <div class="custom-area">
-        <button id="diceBtn" title="掷D20" style="display:none">🎲</button>
+        <button id="diceBtn" title="掷D20" style="opacity:0.5">🎲</button>
         <input id="customInput" placeholder="输入你的行动..." autofocus />
         <button id="customBtn">执 行</button>
     </div>
@@ -1211,7 +1211,7 @@ function renderNarrative(text) {
         forcedCheckAttr = forcedCheck;
         customInput.disabled = true;
         customBtn.disabled = true;
-        diceBtn.style.display = 'inline-block';
+        diceBtn.style.opacity = '1';
         diceBtn.style.boxShadow = '0 0 12px var(--gold)';
         diceBtn.style.borderColor = 'var(--gold-light)';
     }
@@ -1299,7 +1299,7 @@ async function sendToAI(prompt, isSystem = false) {
     diceResult.className = '';
     diceResult.style.display = 'none';
     diceBtn.style.opacity = '1';
-    diceBtn.style.display = 'none';
+    diceBtn.style.opacity = '0.5';
     diceBtn.style.boxShadow = '';
     diceBtn.style.borderColor = '';
     forcedCheckAttr = null;
