@@ -747,7 +747,7 @@ const SHOP_ITEMS = [
     { id: 'luck',       name: '金爪灵摆',   desc: '命运的天平向你倾斜，AI 倾向于更有利的叙述走向', cost: 30, icon: '✦' },
     { id: 'insight',    name: '赤金罗盘',   desc: '每轮可多掷一次D20，取最高结果',     cost: 50, icon: '◈' },
     { id: 'charm',      name: '双蛇权杖',   desc: '初见 NPC 时自动获得良好印象，对话更容易',       cost: 40, icon: '❦' },
-    { id: 'resilience', name: '长青剑',   desc: '面对致命危险时多一次机会，避免直接死亡结局',     cost: 60, icon: '⛊' },
+    { id: 'resilience', name: '长青剑',   desc: '核素浓度达到10时自动消耗1层，抵消本次失败（消耗品）',     cost: 60, icon: '⛊' },
 ];
 
 // 运行状态（先声明，常量定义完后再初始化）
@@ -783,7 +783,18 @@ function checkDanger(action, response) {
     const nmatch = response.match(/\[核素([+-]\d+)\]/);
     if (nmatch) { nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + parseInt(nmatch[1]))); updateNuclideUI(); }
     if (currentRoll && currentRoll.value <= 5) { nuclideLevel += 2; updateNuclideUI(); }
-    if (nuclideLevel >= NUCLIDE_MAX) { nuclideLevel = 0; updateNuclideUI(); return true; }
+    if (nuclideLevel >= NUCLIDE_MAX) {
+        // 长青剑：消耗1层抵消本次失败
+        if (meta.boosts.resilience > 0) {
+            meta.boosts.resilience--;
+            nuclideLevel = Math.max(0, nuclideLevel - 10);
+            updateNuclideUI();
+            updateStatusBar();
+            saveMeta();
+            return false; // 不触发失败
+        }
+        nuclideLevel = 0; updateNuclideUI(); return true;
+    }
     return false;
 }
 
@@ -919,7 +930,7 @@ function buildBoostPrompt() {
     if (b.luck > 0)       boostText += `【金爪灵摆 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
     if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】玩家每轮可多掷${b.insight}次D20，自动取最高结果\n`;
     if (b.charm > 0)      boostText += `【双蛇权杖 Lv.${b.charm}】NPC 初始好感度提升\n`;
-    if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】面临致命危险多一次逃生机会\n`;
+    if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】核素浓度达10时自动消耗1层抵消（剩余${b.resilience}层）\n`;
     if (boostText) parts.push('【当前激活的加成】\n' + boostText);
 
     return parts.join('\n\n');
@@ -1141,21 +1152,6 @@ function renderNarrative(text) {
     }
 
     // 冒险失败处理
-    if (dead && meta.boosts.resilience > 0) {
-        // 长青剑免死
-        meta.boosts.resilience--;
-        saveMeta();
-        dead = false;
-        const saveOverlay = document.createElement('div');
-        saveOverlay.style.cssText = `
-            text-align:center; padding:14px; margin:10px 0;
-            border:2px solid var(--accent-teal); border-radius:4px;
-            background: rgba(61,122,122,.1);
-        `;
-        saveOverlay.innerHTML = `⛊ <b style="color:var(--accent-teal)">长青剑碎裂</b>替你挡下了致命一击<br><span style="font-size:11px;color:var(--text-dim)">免死次数剩余：${meta.boosts.resilience}</span>`;
-        storyEl.appendChild(saveOverlay);
-    }
-
     if (dead) {
         SFX.death();
         const failOverlay = document.createElement('div');
