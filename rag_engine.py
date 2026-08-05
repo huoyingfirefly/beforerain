@@ -13,9 +13,12 @@ COLLECTION_NAME = "world_lore"
 CHROMA_DIR = str(BASE_DIR / "chroma_data")
 LORE_FILE = str(BASE_DIR / "world_lore_full.md")
 
-# 使用本地 sentence-transformers，无需 API 调用
-# 首次运行会自动下载模型（~120MB）
-_openai_ef = embedding_functions.DefaultEmbeddingFunction()
+# 使用 DeepSeek Embedding API
+_openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+    api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+    api_base=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com") + "/v1",
+    model_name="deepseek-chat",
+)
 
 
 def _get_client():
