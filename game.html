@@ -227,6 +227,7 @@ body {
     from { text-shadow: 0 0 20px rgba(200,164,92,.8); }
     to   { text-shadow: 0 0 0 rgba(200,164,92,0); }
 }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
 
 /* ======== 选项区 ======== */
 .choices-area {
@@ -816,7 +817,7 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观，严格
 
 【技能检定】四属性1-5级：洞察(察言观色/识破陷阱)、魅力(说服/伪装/鼓舞)、战斗(格斗/武器/体能)、学识(神秘术/典籍/历史)。高风险行动按属性+装备+环境综合判定。连续成功可给予短暂”优势”加成，连续失败可触发”危机”——额外惩罚选项。
 
-【D20系统】如果有需要凭借运气检定的情况，请在结尾提醒玩家使用d20检定，玩家掷D20后据结果叙事：1-5大失败（付出沉重代价）、6-10失败（事与愿违）、11-15成功（达成目标有波折）、16-20大成功（意外收获）。洞察每高一级，最终结果+1。大成功/大失败需1-2句戏剧性描写。
+【D20系统】关键场景必须强制检定——在段落末尾输出"[强制检定:属性名]"，此时不给任何选项，玩家必须掷骰后方可继续。属性名用洞察/魅力/战斗/学识之一。普通场景仍口头提醒即可。判定：1-5大失败（沉重代价）、6-10失败（事与愿违）、11-15成功（有波折）、16-20大成功（意外收获）。洞察每高一级最终结果+1。
 
 【NPC好感】关键NPC对玩家有隐性好感度。玩家的选择与D20结果会影响NPC态度，进而改变后续选项内容与难度。
 
@@ -835,7 +836,6 @@ const DEFAULT_WORLD_LORE = `【暴雨】雨水自地面倒飞向天空，世界�
 
 【时间线】1999→1996：千禧夜首爆，油画症候，躯体扭曲如油彩。1996→1985：电线症候，血管金属化，来亚什基小镇被完整抹除，维尔汀露天触雨确认免疫。1987→1977：几何症候，躯体碎裂为碎片，维尔汀挚友圈环与伊莎贝拉被回溯，维尔汀正式成为"司辰"。→1930s：大萧条，海因里希大量收集典籍留伏笔。1930s→1912：一战前夜，罗马尼亚孤儿院变故，霍夫曼带走马库斯。1912→1966：反常前跳，海因里希逃亡柏林。
 
-【人物】维尔汀(灰发礼帽/司辰/唯一露天免疫/手提箱庇护)、十四行诗(橘发优等生/助手)、斯奈德(芝加哥黑帮/纯人类双枪/无神秘术)、格蕾塔·霍夫曼(王牌外勤/外冷内热/收养马库斯)、海因里希(魔圈创始人/重塑之手/时序感知)、马库斯(孤儿院出身/解读型神秘术)、露西(机器人外观/科算中心指挥官/电能系)。
 
 【势力】圣洛夫基金会(维和收容/"把孩子交给我们")、芝诺军备学院(军事训练/鸽子屋常备军)、拉普拉斯科算中心(科技神秘术融合/"万物有因果")、重塑之手(秘法复兴/"以吾之手塑汝之序")、第一防线学校(封闭训练机构/暗中筛选免疫者)。
 
@@ -990,11 +990,19 @@ function parseAI(text) {
         text = text.replace(itemMatch[0], '');
     }
 
-    return { amount, item, dead, ending, text };
+    // 解析强制检定 [强制检定:属性]
+    let forcedCheck = null;
+    const fcMatch = text.match(/\[强制检定:([^\]]+)\]/);
+    if (fcMatch) {
+        forcedCheck = fcMatch[1].trim();
+        text = text.replace(fcMatch[0], '');
+    }
+
+    return { amount, item, dead, ending, forcedCheck, text };
 }
 
 function renderNarrative(text) {
-    const { amount, item, dead, ending, text: cleanText } = parseAI(text);
+    const { amount, item, dead, ending, forcedCheck, text: cleanText } = parseAI(text);
 
     const sepIdx = cleanText.indexOf('---');
     let narrative = cleanText;
@@ -1111,6 +1119,25 @@ function renderNarrative(text) {
         setTimeout(() => { window.location.href = '/'; }, 4000);
     }
 
+    // 强制检定
+    if (forcedCheck) {
+        const fcDiv = document.createElement('div');
+        fcDiv.style.cssText = `
+            text-align:center; padding:14px; margin:10px 0;
+            border:2px dashed var(--gold); border-radius:4px;
+            background: rgba(200,164,92,.1); animation: pulse 1s infinite;
+        `;
+        fcDiv.innerHTML = `🎲 <b style="color:var(--gold-light)">强制检定：${forcedCheck}</b><br><span style="font-size:11px;color:var(--text-dim)">必须先掷D20才能继续</span>`;
+        storyEl.appendChild(fcDiv);
+        // 禁用选项和输入
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        customInput.disabled = true;
+        customBtn.disabled = true;
+        // 高亮骰子按钮
+        diceBtn.style.boxShadow = '0 0 12px var(--gold)';
+        diceBtn.style.borderColor = 'var(--gold-light)';
+    }
+
     storyEl.scrollTop = storyEl.scrollHeight;
 }
 
@@ -1179,6 +1206,8 @@ async function sendToAI(prompt, isSystem = false) {
     diceResult.className = '';
     diceResult.style.display = 'none';
     diceBtn.style.opacity = '1';
+    diceBtn.style.boxShadow = '';
+    diceBtn.style.borderColor = '';
     disableInput(false);
     customInput.focus();
 }
