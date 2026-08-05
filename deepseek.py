@@ -12,6 +12,6 @@ llm = ChatOpenAI(
 )
 
 # 流式输出模式
-for chunk in llm.stream("你好"):
+for chunk in llm.stream("你好，请介绍 LangChain"):
     print(chunk.content, end="", flush=True)
 print()  
