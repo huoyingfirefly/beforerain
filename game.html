@@ -1326,14 +1326,11 @@ diceBtn.addEventListener('click', () => {
         if (rollsThisRound >= maxRolls) {
             diceBtn.style.opacity = '0.4';
         }
-        // 强制检定：掷完后自动发送
+        // 强制检定：掷完后立即发送
         if (forcedCheckAttr && rollsThisRound >= maxRolls) {
-            setTimeout(() => {
-                const attr = forcedCheckAttr;
-                forcedCheckAttr = null;
-                const prompt = buildPrompt(`[检定:${attr}]`);
-                sendToAI(prompt);
-            }, 200);
+            const attr = forcedCheckAttr;
+            forcedCheckAttr = null;
+            sendToAI(buildPrompt(`[检定:${attr}]`));
         }
     }, 300);
 });
