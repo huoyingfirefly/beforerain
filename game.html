@@ -1045,11 +1045,16 @@ function parseAI(text) {
         text = text.replace(coinMatch[0], '');
     }
 
-    // 解析道具 [+道具:名称|描述]
+    // 解析道具 [+道具:名称|描述]（过滤局外加成和已有物品）
     const itemMatch = text.match(/\[\+道具:([^|\]]+)\|([^\]]+)\]/);
     if (itemMatch) {
-        item = { name: itemMatch[1].trim(), desc: itemMatch[2].trim() };
-        addItem(item.name, item.desc);
+        const itemName = itemMatch[1].trim();
+        const boostNames = ['金爪灵摆', '赤金罗盘', '双蛇权杖', '长青剑', '分辨善恶之果', '幸运之星'];
+        const invNames = (meta.inventory || []).map(i => i.name);
+        if (!boostNames.includes(itemName) && !invNames.includes(itemName)) {
+            item = { name: itemName, desc: itemMatch[2].trim() };
+            addItem(item.name, item.desc);
+        }
         text = text.replace(itemMatch[0], '');
     }
 
