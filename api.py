@@ -102,6 +102,10 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
             messages.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "ai":
             messages.append(AIMessage(content=msg["content"]))
+    # 轮次计数：强制AI在20轮内收束
+    round_num = len([m for m in history if m["role"] == "user"]) + 1
+    if round_num >= 15:
+        prompt = f"[第{round_num}轮/最多20轮，请尽快推进结局] " + prompt
     messages.append(HumanMessage(content=prompt))
     return messages
 
