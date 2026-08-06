@@ -782,7 +782,10 @@ function checkDanger(action, response) {
     if (instantFail.some(w => action.includes(w))) { nuclideLevel = 0; updateNuclideUI(); return true; }
     const nmatch = response.match(/\[核素([+-]\d+)\]/);
     if (nmatch) {
-        nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + parseInt(nmatch[1])));
+        let delta = parseInt(nmatch[1]);
+        // 单轮核素变化上限±3，防止千问自行加总输出异常值
+        delta = Math.max(-3, Math.min(3, delta));
+        nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + delta));
     } else {
         // 副AI没输出核素标记时自动衰减
         nuclideLevel = Math.max(0, nuclideLevel - 1);
