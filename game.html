@@ -1284,6 +1284,9 @@ async function sendToAI(prompt, isSystem = false) {
     const fullSystem = AI_TEMPLATE.replace('{WORLD_LORE}', worldSetting) + '\n\n' + buildBoostPrompt();
 
     let fullResponse = '';
+    let mechResponse = '';  // 副AI标记（在主AI之后异步到达）
+    let rendered = false;
+
     try {
         const res = await fetch('/chat', {
             method: 'POST',
@@ -1298,34 +1301,60 @@ async function sendToAI(prompt, isSystem = false) {
             if (done) break;
             const chunk = decoder.decode(value, { stream: true });
             fullResponse += chunk;
-            // 检测到失败标记立刻截断
+
             if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
                 reader.cancel();
                 break;
             }
-            loadingEl.textContent = fullResponse;
-            storyEl.scrollTop = storyEl.scrollHeight;
+
+            // 主AI完成信号：立即渲染叙事，不等副AI
+            if (!rendered && fullResponse.includes('[MAIN_DONE]')) {
+                const parts = fullResponse.split('[MAIN_DONE]');
+                const narrativePart = parts[0];
+                mechResponse = parts.slice(1).join('[MAIN_DONE]');
+                loadingEl.remove();
+                renderNarrative(narrativePart);
+                rendered = true;
+                if (!isSystem) history.push({ role: 'user', content: prompt });
+                history.push({ role: 'ai', content: narrativePart });
+                continue;
+            }
+
+    if (!rendered) {
+        loadingEl.remove();
+    }
+
+    if (rendered) {
+        // 提前渲染模式：只追加副AI标记，不重复渲染
+        fullResponse += mechResponse;
+        if (checkDanger(prompt, mechResponse)) {
+            fullResponse = '冒险失败——暴雨不会永远给予侥幸。[冒险失败]';
         }
-    } catch (err) {
-        fullResponse = '连接失败，请确认后端已启动。';
+        if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
+            fullResponse = fullResponse.split(/\[冒险失败\]|\[玩家死亡\]/)[0] + '[冒险失败]';
+        }
+        // 只更新机制数据，不重复渲染叙事
+        const { amount, item, dead, ending } = parseAI(fullResponse);
+        if (amount > 0) { SFX.coin(); updateStatusBar(); }
+        if (item) { SFX.item(); addItem(item.name, item.desc); }
+        if (dead || ending) {
+            storyEl.querySelectorAll('.narrative').forEach(el => el.remove());
+            renderNarrative(fullResponse);
+        }
+    } else {
+        // 传统模式：等齐所有响应再渲染
+        if (checkDanger(prompt, fullResponse)) {
+            fullResponse = '冒险失败——暴雨不会永远给予侥幸。[冒险失败]';
+        }
+        if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
+            fullResponse = fullResponse.split(/\[冒险失败\]|\[玩家死亡\]/)[0] + '[冒险失败]';
+        }
+        renderNarrative(fullResponse);
+        if (!isSystem) {
+            history.push({ role: 'user', content: prompt });
+        }
+        history.push({ role: 'ai', content: fullResponse });
     }
-
-    loadingEl.remove();
-
-    // 前端危险判定：覆盖AI的“不死之身”
-    if (checkDanger(prompt, fullResponse)) {
-        fullResponse = '冒险失败——暴雨不会永远给予侥幸。[冒险失败]';
-    }
-
-    if (/\[冒险失败\]|\[玩家死亡\]/.test(fullResponse)) {
-        fullResponse = fullResponse.split(/\[冒险失败\]|\[玩家死亡\]/)[0] + '[冒险失败]';
-    }
-    renderNarrative(fullResponse);
-
-    if (!isSystem) {
-        history.push({ role: 'user', content: prompt });
-    }
-    history.push({ role: 'ai', content: fullResponse });
 
     // 重置骰子状态（但不重置 forcedCheckAttr，由骰子掷出时自行清除）
     currentRoll = null;
