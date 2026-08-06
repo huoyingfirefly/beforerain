@@ -124,26 +124,20 @@ def stream_response(prompt: str, history: list[dict], system: str):
     full_response = ""
     for chunk in llm.stream(messages):
         if chunk.content:
-            full_response += chunk.content
             yield chunk.content
 
         # 信号：主AI叙事完成，前端可以立即渲染
-        yield "
-[MAIN_DONE]
-"
+        yield "\n[MAIN_DONE]\n"
 
         # 副 AI 追加机制标记（不阻塞前端渲染）
         try:
             mech_messages = [
                 SystemMessage(content=MECHANIC_PROMPT),
-                HumanMessage(content=f"玩家行动：{prompt}
-主AI回复：{full_response[-500:]}
-请输出机制标记。"),
+                HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
             ]
             mech_resp = mechanic_llm.invoke(mech_messages)
             if mech_resp.content:
-                yield "
-" + mech_resp.content.strip()
+                yield "\n" + mech_resp.content.strip()
         except Exception:
             pass
 
