@@ -575,8 +575,6 @@ body {
         <h3>世 界 观 设 定</h3>
         <label>世界背景简述</label>
         <textarea id="worldInput" placeholder="简要描述这个世界的核心设定……" style="height:100px;"></textarea>
-        <label>开场引导</label>
-        <input id="openingInput" placeholder="输入你想体验的开场，留空则自动生成..." />
         <div class="btn-row">
             <button class="btn-secondary" id="closeWorldBtn">取消</button>
             <button class="btn-primary" id="applyWorldBtn">应用并开始</button>
@@ -753,7 +751,6 @@ const SHOP_ITEMS = [
 // 运行状态（先声明，常量定义完后再初始化）
 let meta;
 let worldSetting;
-let opening;
 let history = [];
 let playing = false;
 let currentRoll = null;   // 当前掷骰结果 {value}
@@ -887,7 +884,6 @@ const DEFAULT_OPENING = '游戏开始。按本局给定的剧本直接叙事，�
 // 初始化运行状态（常量定义完成后才能引用）
 meta = loadMeta();
 worldSetting = localStorage.getItem(WORLD_KEY) || DEFAULT_WORLD;
-opening = DEFAULT_OPENING;
 
 // =============================================
 //  构建加成提示词
@@ -1426,7 +1422,7 @@ function buildPrompt(action) {
 
 // 存档
 document.getElementById('saveBtn').addEventListener('click', () => {
-    const save = { worldSetting, opening, history, timestamp: new Date().toISOString() };
+    const save = { worldSetting, history, timestamp: new Date().toISOString() };
     const divs = storyEl.querySelectorAll('.narrative');
     save.storyPreview = divs.length > 0 ? divs[divs.length-1].textContent.slice(0,60)+'...' : '(新游戏)';
     localStorage.setItem(STORY_KEY, JSON.stringify(save));
@@ -1440,7 +1436,6 @@ document.getElementById('loadBtn').addEventListener('click', () => {
     if (!raw) { alert('没有找到存档。'); return; }
     const save = JSON.parse(raw);
     worldSetting = save.worldSetting;
-    opening = save.opening;
     history = save.history;
     storyEl.innerHTML = '';
     choicesEl.innerHTML = '';
@@ -1459,7 +1454,6 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     playing = false;
     localStorage.removeItem(STORY_KEY);
     document.getElementById('worldInput').value = worldSetting;
-    document.getElementById('openingInput').value = DEFAULT_OPENING;
     document.getElementById('worldModal').classList.add('show');
 });
 
@@ -1472,7 +1466,6 @@ document.getElementById('worldBtn').addEventListener('click', () => {
 document.getElementById('closeWorldBtn').addEventListener('click', () => worldModal.classList.remove('show'));
 document.getElementById('applyWorldBtn').addEventListener('click', () => {
     worldSetting = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
-    opening = document.getElementById('openingInput').value.trim() || DEFAULT_OPENING;
     localStorage.setItem(WORLD_KEY, worldSetting);
     worldModal.classList.remove('show');
     history = [];
@@ -1512,7 +1505,7 @@ document.getElementById('applyWorldBtn').addEventListener('click', () => {
     ];
     const pick = frameworks[Math.floor(Math.random() * frameworks.length)];
     alert('☢ 非对称核素浓度\n\n安全行动→浓度下降 | 危险场景→浓度上升\n浓度≥10→触发失败 | 长青剑可抵消\n状态栏实时显示：绿色安全·金色警戒·红色濒危');
-    sendToAI(`[题材:${genre}] ${pick} ${opening}`, true);
+    sendToAI(`[题材:${genre}] ${pick} ${DEFAULT_OPENING}`, true);
 });
 
 // 商店弹窗
@@ -1588,7 +1581,6 @@ if (hasSave) {
     storyEl.parentNode.insertBefore(tip, storyEl.nextSibling);
 } else {
     document.getElementById('worldInput').value = worldSetting;
-    document.getElementById('openingInput').value = DEFAULT_OPENING;
     worldModal.classList.add('show');
     playing = true;
 }
