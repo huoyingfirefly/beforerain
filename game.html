@@ -866,7 +866,7 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观。你只
 
 【胜利触发】当故事到达自然终点（成功逃离暴雨/完成核心任务/揭开真相），输出[冒险胜利:简述成果]，不列选项。
 
-【铁则——最高优先级】非胜利场景每次回复末尾必须包含：\n---\n1. 选项一\n2. 选项二\n3. 选项三
+【铁则——最高优先级】非胜利场景每次回复末尾必须原样输出以下三行（不可用其他符号替代数字编号，不可加粗体/斜体/markdown），不输出选项游戏会直接崩溃：\n---\n1. 选项内容一\n2. 选项内容二\n3. 选项内容三
 
 `;
 
@@ -1026,8 +1026,10 @@ function parseAI(text) {
         text = text.replace(/\[冒险胜利[^\]]*\]/, '');
     }
 
-    // 解析纺锤 [+X纺锤]
-    const coinMatch = text.match(/\[\+(\d+)纺锤\]/);
+    // 解析纺锤 [+X纺锤]（兼容千问冗长格式如[纺锤:创造性X+风险性Y+契合Z=+N]）
+    let coinMatch = text.match(/\[\+(\d+)纺锤\]/);
+    if (!coinMatch) coinMatch = text.match(/\[纺锤[：:][^\]]*=\s*\+?(\d+)\s*纺锤?\s*\]/);
+    if (!coinMatch) coinMatch = text.match(/\[\+?(\d+)\s*纺锤\s*\]/);
     if (coinMatch) {
         amount = parseInt(coinMatch[1]);
         addCurrency(amount);
@@ -1060,10 +1062,13 @@ return { amount, item, dead, ending, victory, forcedCheck, safePath, text };
 function renderNarrative(text) {
     const { amount, item, dead, ending, victory, forcedCheck, safePath, text: cleanText } = parseAI(text);
 
-    // 仅以下三种为选项分隔符
+    // 选项分隔符（多级匹配，防止AI不按格式输出）
     let sepIdx = cleanText.indexOf('---');
     if (sepIdx === -1) sepIdx = cleanText.indexOf('***');
     if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1.');
+    if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1、');
+    if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1．');
+    if (sepIdx === -1) sepIdx = cleanText.search(/\n\s*\d+[\.\、．\)）]/);
     let narrative = cleanText;
     let choicesText = '';
 
