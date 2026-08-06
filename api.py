@@ -127,22 +127,26 @@ def stream_response(prompt: str, history: list[dict], system: str):
 
     messages = build_messages(prompt, history, system, rag_context)
     full_response = ""
-    for chunk in llm.stream(messages):
-        if chunk.content:
-            full_response += chunk.content
-            yield chunk.content
+    try:
+        for chunk in llm.stream(messages):
+            if chunk.content:
+                full_response += chunk.content
+                yield chunk.content
+    except Exception as e:
+        yield f"\n[主AI错误: {str(e)[:200]}]"
 
     # 副 AI 追加机制标记
-    try:
-        mech_messages = [
-            SystemMessage(content=MECHANIC_PROMPT),
-            HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
-        ]
-        mech_resp = mechanic_llm.invoke(mech_messages)
-        if mech_resp.content:
-            yield "\n" + mech_resp.content.strip()
-    except Exception:
-        pass
+    if full_response:
+        try:
+            mech_messages = [
+                SystemMessage(content=MECHANIC_PROMPT),
+                HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
+            ]
+            mech_resp = mechanic_llm.invoke(mech_messages)
+            if mech_resp.content:
+                yield "\n" + mech_resp.content.strip()
+        except Exception as e:
+            yield f"\n[副AI错误: {str(e)[:200]}]"
 
 
 @app.post("/chat")
