@@ -924,17 +924,13 @@ function buildBoostPrompt() {
         parts.push('【背包物资】\n（空）');
     }
 
-    // 加成
-    let boostText = '';
+        // 加成（仅告知被动效果，不列道具名避免主AI误用为剧情物品）
     const b = meta.boosts;
-    if (b.luck > 0)       boostText += `【金爪灵摆 Lv.${b.luck}】在叙述中略微偏向对玩家有利的结果\n`;
-    if (b.insight > 0)    boostText += `【赤金罗盘 Lv.${b.insight}】玩家每轮可多掷${b.insight}次D20，自动取最高结果\n`;
-    if (b.charm > 0)      boostText += `【双蛇权杖 Lv.${b.charm}】NPC 初始好感度提升\n`;
-    if (b.discern > 0) boostText += `【分辨善恶之果 Lv.${b.discern}】标注安全路径
-`;
-    if (b.resilience > 0) boostText += `【长青剑 Lv.${b.resilience}】核素浓度达10时自动消耗1层抵消（剩余${b.resilience}层）\n`;
-    if (boostText) parts.push('【当前激活的加成】\n' + boostText);
-
+    let passiveHints = [];
+    if (b.luck > 0)    passiveHints.push('叙述略微偏向玩家');
+    if (b.charm > 0)   passiveHints.push('NPC好感度略高');
+    if (passiveHints.length > 0) parts.push('【被动加成】' + passiveHints.join('，'));
+    // 赤金罗盘/双蛇权杖/分辨善恶之果/长青剑/金爪灵摆是局外道具，AI禁止在叙事中提及
     return parts.join('\n\n');
 }
 
