@@ -116,7 +116,9 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
 
 def stream_response(prompt: str, history: list[dict], system: str):
     # 先取 RAG 上下文（主AI和副AI共用）
-    rag_context = query_world(prompt, n=8, pick=3)
+    # 用系统提示（含框架） + 玩家行动组合查询，提高检索精准度
+    rag_query = system[:800] + " " + prompt
+    rag_context = query_world(rag_query)
 
     messages = build_messages(prompt, history, system, rag_context)
     full_response = ""
