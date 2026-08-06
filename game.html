@@ -765,14 +765,14 @@ let roundCount = 0;          // 当前轮次计数
 
 // 前端危险值系统——累计到阈值自动触发失败，不依赖AI
 let nuclideLevel = 0;      // 非对称核素浓度
-const NUCLIDE_MAX = 10;
+const NUCLIDE_MAX = 14;     // 上限（千问判危偏激，适当放宽）
 
 function updateNuclideUI() {
     const el = document.getElementById('nuclideDisplay');
     if (!el) return;
     const pct = Math.min(100, Math.round(nuclideLevel / NUCLIDE_MAX * 100));
     const color = nuclideLevel >= 8 ? 'var(--accent-red)' : nuclideLevel >= 4 ? 'var(--gold)' : 'var(--text-dim)';
-    const ruleHint = nuclideLevel <= 0 ? '' : ' <span style="font-size:10px;color:var(--text-dim)">(安全降·危险升·≥10失败)</span>';
+    const ruleHint = nuclideLevel <= 0 ? '' : ' <span style="font-size:10px;color:var(--text-dim)">(安全降·危险升·≥14失败)</span>';
     el.innerHTML = `☢ 非对称核素浓度：<span style="color:${color};font-weight:600">${nuclideLevel}/${NUCLIDE_MAX}</span>${ruleHint}`;
     el.style.display = nuclideLevel > 0 ? 'block' : 'none';
 }
@@ -781,7 +781,13 @@ function checkDanger(action, response) {
     const instantFail = ["自杀","赴死","求死","同归于尽","跳入暴雨","冲进暴雨","走进暴雨","触雨","接触雨滴"];
     if (instantFail.some(w => action.includes(w))) { nuclideLevel = 0; updateNuclideUI(); return true; }
     const nmatch = response.match(/\[核素([+-]\d+)\]/);
-    if (nmatch) { nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + parseInt(nmatch[1]))); updateNuclideUI(); }
+    if (nmatch) {
+        nuclideLevel = Math.max(0, Math.min(NUCLIDE_MAX, nuclideLevel + parseInt(nmatch[1])));
+    } else {
+        // 副AI没输出核素标记时自动衰减
+        nuclideLevel = Math.max(0, nuclideLevel - 1);
+    }
+    updateNuclideUI();
     if (currentRoll && currentRoll.value <= 5) { nuclideLevel += 2; updateNuclideUI(); }
     if (nuclideLevel >= NUCLIDE_MAX) {
         // 长青剑：消耗1层抵消本次失败
@@ -1493,7 +1499,7 @@ document.getElementById('applyWorldBtn').addEventListener('click', () => {
         '本局剧本(1987宇宙组曲-极北观测站)：你是米尔瓦小镇的气象观测员。在信号塔截获加密传输——有人向基地外发送发射台坐标和航天数据。泄密者在基地内部。马戏团卡车是你唯一的交通工具，团长科兹洛夫带着空中飞人女孩库珀花环和沉默的星之少女远旅同行。花环从未被告知暴雨的真相。抵达基地后发现你的气象鸽数据被篡改——暴雨预测被推迟了三周，总部撤离决策可能已延误。冷周六给你选择：进入基地协助找出泄密者但永远放弃撤离机会，或返回米尔瓦用原始数据向总部发出预警。远旅的琴声让传送仪器校准数据开始异常波动。',
     ];
     const pick = frameworks[Math.floor(Math.random() * frameworks.length)];
-    alert('☢ 非对称核素浓度\n\n安全行动→浓度下降 | 危险场景→浓度上升\n浓度≥10→触发失败 | 长青剑可抵消\n状态栏实时显示：绿色安全·金色警戒·红色濒危');
+    alert('☢ 非对称核素浓度\n\n安全行动→浓度下降 | 危险场景→浓度上升\n浓度≥14→触发失败 | 每轮安全自动-1\n长青剑可抵消 | D20大失败+2');
     sendToAI(`[题材:${genre}] ${pick} ${opening}`, true);
 });
 
