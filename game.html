@@ -1319,6 +1319,10 @@ async function sendToAI(prompt, isSystem = false) {
                 history.push({ role: 'ai', content: narrativePart });
                 continue;
             }
+        }
+    } catch (err) {
+        fullResponse = "连接失败，请确认后端已启动。";
+    }
 
     if (!rendered) {
         loadingEl.remove();
