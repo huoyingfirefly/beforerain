@@ -1495,8 +1495,16 @@ document.getElementById('applyWorldBtn').addEventListener('click', () => {
     meta.gamesPlayed++;
     saveMeta();
     const genre = GENRES[Math.floor(Math.random() * GENRES.length)];
+    const frameworks = [
+        '本局剧本：你收到基金会时序预警，局部时序逆流，旧时代残影现世。在废弃街区排查异常，遭遇重塑之手潜伏者。',
+        '本局剧本：你受命调查一处不受暴雨抹除规则的不可回溯地域。在旧城遗址遭遇科研者和守护者。',
+        '本局剧本：承接马库斯带回暴雨免疫术式情报的伏笔。维也纳地下留存海因里希未完成术式手稿。潜入战后错位的维也纳旧城区。',
+        '本局剧本：当年浸泡溪水的祈福小木人碎片随暴雨飘散，重新聚合诞生自我意识。曲娘追寻同源灵力，重塑之手企图夺取碎片。',
+        '本局剧本：设定在暴雨世界观下的原创故事，紧扣暴雨主题展开。',
+    ];
+    const pick = frameworks[Math.floor(Math.random() * frameworks.length)];
     alert('☢ 非对称核素浓度\n\n安全行动→浓度下降 | 危险场景→浓度上升\n浓度≥10→触发失败 | 长青剑可抵消\n状态栏实时显示：绿色安全·金色警戒·红色濒危');
-    sendToAI(`[题材:${genre}] ${opening}`, true);
+    sendToAI(`[题材:${genre}] ${pick} ${opening}`, true);
 });
 
 // 商店弹窗
