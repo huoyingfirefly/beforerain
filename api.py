@@ -35,8 +35,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # 主 AI：叙事
 llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+    model=os.getenv("DEEPSEEK_MODEL", "qwen3-vl-flash"),
     temperature=0.7,
     streaming=True,
     max_tokens=2048,
@@ -45,8 +45,8 @@ llm = ChatOpenAI(
 # 副 AI：机制判定
 mechanic_llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+    model=os.getenv("DEEPSEEK_MODEL", "qwen3-vl-flash"),
     temperature=0,
     streaming=False,
 )
