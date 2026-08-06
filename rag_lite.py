@@ -91,14 +91,8 @@ def query_world(query: str, n: int = 12, pick: int = 5, max_chars: int = 1500) -
             if len(result) + len(doc) + 10 > max_chars:
                 result += doc[:max_chars - len(result) - 10] + "..."
                 break
-            result += doc + "
-
----
-
-"
-        return result.rstrip("
-- 
-")
+            result += doc + "\n\n---\n\n"
+        return result.rstrip("\n- \n")
     except Exception:
         return ""
 
