@@ -45,9 +45,10 @@ llm = ChatOpenAI(
 # 副 AI：机制判定
 mechanic_llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+    model=os.getenv("DEEPSEEK_MODEL", "qwen3-flash"),
     temperature=0,
+    max_tokens=150,
     streaming=False,
 )
 
