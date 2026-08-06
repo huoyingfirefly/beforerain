@@ -379,6 +379,43 @@ body {
         <label>世界简述（发送给 AI 的完整提示词已内置，此处只需描述世界观背景）</label>
         <textarea id="worldInput" placeholder="简要描述这个世界的核心设定……" style="height:100px;"></textarea>
         <label>开场引导</label>
+        <input id="openingInput" placeholder="输入你想体验的开场，留空则自动生成..." />
+
+        <hr style="border-color:var(--border-dark);margin:18px 0;">
+
+        <h3 style="font-size:14px;letter-spacing:4px;">角 色 创 建</h3>
+
+        <label>角色姓名</label>
+        <input id="charName" placeholder="为角色取名，留空则随机分配..." />
+
+        <label>背景简述</label>
+        <input id="charBg" placeholder="描述角色背景，留空则随机分配..." />
+
+        <label>属性分配（共8点可分配，每项1-3级）</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">洞察</span>
+                <input type="range" min="1" max="3" value="1" id="attrInsight" style="flex:1;accent-color:var(--gold);">
+                <span id="valInsight" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">魅力</span>
+                <input type="range" min="1" max="3" value="1" id="attrCharm" style="flex:1;accent-color:var(--gold);">
+                <span id="valCharm" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">战斗</span>
+                <input type="range" min="1" max="3" value="1" id="attrCombat" style="flex:1;accent-color:var(--gold);">
+                <span id="valCombat" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="color:var(--gold);font-size:12px;width:36px;">学识</span>
+                <input type="range" min="1" max="3" value="1" id="attrLore" style="flex:1;accent-color:var(--gold);">
+                <span id="valLore" style="color:var(--text-dim);font-size:12px;width:20px;">1</span>
+            </div>
+        </div>
+        <div id="attrWarning" style="color:var(--accent-red);font-size:11px;text-align:center;margin-top:6px;display:none;">总点数不能超过8点</div>
+
         <div class="btn-row">
             <button class="btn-secondary" id="closeWorldBtn">取消</button>
             <button class="btn-primary" id="startGameBtn">开始冒险</button>
@@ -546,7 +583,24 @@ function buyBoost(id, cost) {
 // 开始新游戏 → 弹出世界观设定
 document.getElementById('newGameBtn').addEventListener('click', () => {
     document.getElementById('worldInput').value = localStorage.getItem(WORLD_KEY) || DEFAULT_WORLD;
+    document.getElementById('openingInput').value = DEFAULT_OPENING;
     document.getElementById('worldModal').classList.add('show');
+});
+
+// 属性滑块联动
+const sliders = ['Insight','Charm','Combat','Lore'];
+const attrIds = sliders.map(s => 'attr'+s);
+const maxPoints = 8;
+
+function updateSliderValues() {
+    const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
+    const total = vals.reduce((a,b)=>a+b, 0);
+    sliders.forEach((s, i) => document.getElementById('val'+s).textContent = vals[i]);
+    document.getElementById('attrWarning').style.display = total > maxPoints ? 'block' : 'none';
+}
+attrIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateSliderValues);
 });
 
 // 世界观弹窗
@@ -555,10 +609,42 @@ document.getElementById('closeWorldBtn').addEventListener('click', () => {
 });
 document.getElementById('startGameBtn').addEventListener('click', () => {
     const world = document.getElementById('worldInput').value.trim() || DEFAULT_WORLD;
+    const mode = document.getElementById('startGameBtn').dataset.mode;
 
+    if (mode === 'save-only') {
+        // 仅保存世界观，不进游戏
+        localStorage.setItem(WORLD_KEY, world);
+        document.getElementById('worldModal').classList.remove('show');
+        document.getElementById('startGameBtn').textContent = '开始冒险';
+        document.getElementById('startGameBtn').dataset.mode = '';
+        return;
     }
 
+    // 开始新游戏：检查属性点
+    const vals = attrIds.map(id => parseInt(document.getElementById(id).value));
+    if (vals.reduce((a,b)=>a+b, 0) > maxPoints) { alert('属性总点数不能超过8点！'); return; }
+
+    // 随机身份库
+    const randNames = ['艾琳', '诺亚', '塞西尔', '维奥莱特', '赫克托', '奥菲莉亚', '多里安', '伊莎朵拉', '雷恩', '莉迪亚'];
+    const randBgs = [
+        '基金会的低级调查员，被派往危险区域执行任务',
+        '流浪的神秘学家，靠打零工维生，无门无派',
+        '一战老兵，退役后四处漂泊寻找容身之处',
+        '小镇诊所的护士，在暴雨中失去了所有亲人',
+        '前黑帮成员，隐姓埋名试图重新开始',
+        '图书馆的档案管理员，偶然发现了暴雨的秘密',
+        '逃离家庭的学生，带着一本破旧的神秘术典籍',
+        '伯爵家的马车夫，在主人被抹除后继承了马车和秘密',
+    ];
+
+    // 保存角色
+    meta.character = {
+        name: document.getElementById('charName').value.trim() || randNames[Math.floor(Math.random() * randNames.length)],
+        background: document.getElementById('charBg').value.trim() || randBgs[Math.floor(Math.random() * randBgs.length)],
+        insight: vals[0], charm: vals[1], combat: vals[2], lore: vals[3],
+    };
     meta.inventory = [];
+
     localStorage.setItem(WORLD_KEY, world);
     localStorage.removeItem(STORY_KEY);
     meta.gamesPlayed++;
