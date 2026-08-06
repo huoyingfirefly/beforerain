@@ -854,7 +854,9 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观。你只
 
 【世界观】{WORLD_LORE}
 
-【叙事】50-120字/段，切入式开头。15轮必须进入结局阶段，20轮内必须输出[冒险胜利]或[冒险失败]。禁止车轱辘话来回说，每轮必须有不可逆的实质进展。如果剧情卡住无从推进，直接触发结局。
+【叙事】50-120字/段，切入式开头。禁止车轱辘话来回说，每轮必须有不可逆的实质进展。如果剧情卡住无从推进，给出危机转折而非直接结局。
+
+【轮次控制——严禁速通】初期(1-5轮)：危机引入，铺垫世界观和NPC，不得触发胜利。中期(6-11轮)：危机升级，玩家面临重大抉择和D20检定，不得触发胜利。后期(12-20轮)：高潮收束，16轮后才允许输出[冒险胜利]。20轮必须输出结局标记。
 
 【选项】3选项需本质差异，至少1高风险+1审慎。
 
@@ -864,9 +866,9 @@ const AI_TEMPLATE = `你是互动剧本GM。RAG已注入完整世界观。你只
 
 【题材】本轮游戏题材已由系统随机选定，你必须严格围绕此题材展开叙事，中途不得切换。
 
-【胜利触发】当故事到达自然终点（成功逃离暴雨/完成核心任务/揭开真相），输出[冒险胜利:简述成果]，不列选项。
+【胜利触发——严格限制】仅当16轮之后且玩家完成以下任一条件时才可触发：(1)成功抵达明确命名的庇护所(手提箱/基金会堡垒/天然庇护点) (2)完成剧本框架中的核心目标且该目标经过至少3轮铺垫。未满足条件时即使叙事到达高潮也必须继续延伸新的危机。格式：[冒险胜利:简述成果]。输出此标记后不列选项。
 
-【铁则——最高优先级】非胜利场景每次回复末尾必须原样输出以下三行（不可用其他符号替代数字编号，不可加粗体/斜体/markdown），不输出选项游戏会直接崩溃：\n---\n1. 选项内容一\n2. 选项内容二\n3. 选项内容三
+【铁则——最高优先级】非胜利场景每次回复末尾必须包含：\n---\n1. 选项一\n2. 选项二\n3. 选项三
 
 `;
 
@@ -1026,10 +1028,8 @@ function parseAI(text) {
         text = text.replace(/\[冒险胜利[^\]]*\]/, '');
     }
 
-    // 解析纺锤 [+X纺锤]（兼容千问冗长格式如[纺锤:创造性X+风险性Y+契合Z=+N]）
-    let coinMatch = text.match(/\[\+(\d+)纺锤\]/);
-    if (!coinMatch) coinMatch = text.match(/\[纺锤[：:][^\]]*=\s*\+?(\d+)\s*纺锤?\s*\]/);
-    if (!coinMatch) coinMatch = text.match(/\[\+?(\d+)\s*纺锤\s*\]/);
+    // 解析纺锤 [+X纺锤]
+    const coinMatch = text.match(/\[\+(\d+)纺锤\]/);
     if (coinMatch) {
         amount = parseInt(coinMatch[1]);
         addCurrency(amount);
@@ -1062,13 +1062,10 @@ return { amount, item, dead, ending, victory, forcedCheck, safePath, text };
 function renderNarrative(text) {
     const { amount, item, dead, ending, victory, forcedCheck, safePath, text: cleanText } = parseAI(text);
 
-    // 选项分隔符（多级匹配，防止AI不按格式输出）
+    // 仅以下三种为选项分隔符
     let sepIdx = cleanText.indexOf('---');
     if (sepIdx === -1) sepIdx = cleanText.indexOf('***');
     if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1.');
-    if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1、');
-    if (sepIdx === -1) sepIdx = cleanText.lastIndexOf('\n1．');
-    if (sepIdx === -1) sepIdx = cleanText.search(/\n\s*\d+[\.\、．\)）]/);
     let narrative = cleanText;
     let choicesText = '';
 

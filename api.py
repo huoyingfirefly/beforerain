@@ -35,8 +35,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # 主 AI：叙事
 llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-    model=os.getenv("DEEPSEEK_MODEL", "qwen3-flash"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
     temperature=0.7,
     streaming=True,
     max_tokens=2048,
@@ -45,54 +45,47 @@ llm = ChatOpenAI(
 # 副 AI：机制判定
 mechanic_llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-    model=os.getenv("DEEPSEEK_MODEL", "qwen3-flash"),
+    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
     temperature=0,
     streaming=False,
 )
 
-MECHANIC_PROMPT = """你是游戏机制判定AI。你只输出无格式标记，不输出任何解释、分析、或额外文字。
+MECHANIC_PROMPT = """你是游戏机制判定AI。绝对禁止输出解释、分析或额外文字，只输出格式标记，一行一个。
 
 【世界观简报】暴雨是雨水倒飞、时间回溯的灾难现象。触雨者被抹除。维尔汀是唯一露天免疫者。庇护方式仅三种：手提箱、基金会堡垒、天然庇护点。世界正被暴雨反复回溯，从1999年一路退到1966年。普通人挣扎求生，神秘学家各有专长。
 
-根据玩家行动和主AI叙事进行判定，严格按以下格式输出，一行一个标记：
-
 【纺锤评分 — 必须输出】
-三项打分(创造性0-4 + 风险性0-4 + 世界观契合0-4)，只输出总分标记。
+三项打分(创造性0-4 + 风险性0-4 + 世界观契合0-4)，只输出总分。
 正确格式：[+8纺锤]
-禁止格式：[纺锤:创造性3+风险性1+世界观契合4=[+8纺锤]]
-禁止输出计算过程，直接给总分。
+禁止格式：[纺锤:创造性3+风险性1+契合4=+8] [纺锤:…=+8纺锤] 等任何带计算过程的写法。
 
 【道具掉落 — 可选】
-场景有自然可拾取物时输出。格式：[+道具:名称|一句话描述]
-不要每轮都给，没东西就不输出。
+格式：[+道具:名称|一句话描述]
+只在场景中有自然可拾取物(武器/文件/徽章/药物/工具等)时才输出，没东西就不输出。
 
 【强制检定 — 仅特定场景】
-仅以下场景触发：躲避暴雨/接触雨水、破解机关陷阱、对抗明显强于玩家的敌人、说服关键NPC改变立场。
+仅以下触发：躲避暴雨/接触雨水、破解机关陷阱、对抗强于玩家的敌人、说服关键NPC改变立场。
 格式：[强制检定:洞察] 或 [强制检定:魅力] 或 [强制检定:战斗] 或 [强制检定:学识]
 
 【非对称核素浓度 — 必须输出】
-你假设场景安全为默认。仅以下三种情况输出正值：
-(1) 主AI叙事明确提到暴雨/触雨/雨滴攻击玩家 → [核素+3]
+默认安全。仅以下三种输出正值：
+(1) 主AI明确写到暴雨/触雨/雨滴攻击玩家 → [核素+3]
 (2) 主AI明确写到敌人持武器攻击玩家 → [核素+2]
 (3) 主AI明确写到玩家受伤或身处险境 → [核素+1]
-以上三种均不满足时必须输出 [核素-1] 或 [核素-2]。
+以上均不满足时输出 [核素-1] 或 [核素-2]。
 浓度≥10时输出 [冒险失败:死因简述]。
 
 【安全路径 — 可选】
-从3个选项中选出风险最低的。格式：[安全路径:1]（X为1/2/3）
-没有明显安全选项则不输出。
+从3选项中选风险最低的。格式：[安全路径:1]（数字1/2/3）
+无安全选项则不输出。
 
-【胜利结算 — 可选】
-仅当玩家成功逃离本次暴雨(抵达庇护所/进入手提箱/到达天然庇护点)、或完成框架核心目标、或主AI明确写到玩家在庇护所内安顿/暴雨结束时触发。
-格式：[冒险胜利:简述成果]
+【胜利结算 — 严格禁止速通】
+主AI有轮次限制(16轮后才可触发)。你判定胜利时必须确认：(1)玩家已抵达明确命名的庇护所 (2)框架核心目标已完成且至少经过3轮叙事铺垫。若主AI在前16轮内输出[冒险胜利]，你必须忽略它——改为继续正常判定纺锤/核素/道具。仅当16轮后且条件满足时，才输出 [冒险胜利:简述成果]。
 
-【输出模板 — 严格遵循】
-每轮你最简输出为两行：
-[+X纺锤]
-[核素±X]
-
-有额外事件时追加对应标记。绝对禁止输出任何解释、推导、分析文字。只输出标记。"""
+最终输出范例（每轮基本格式）：
+[+5纺锤]
+[核素-1]"""
 
 
 
@@ -127,26 +120,22 @@ def stream_response(prompt: str, history: list[dict], system: str):
 
     messages = build_messages(prompt, history, system, rag_context)
     full_response = ""
-    try:
-        for chunk in llm.stream(messages):
-            if chunk.content:
-                full_response += chunk.content
-                yield chunk.content
-    except Exception as e:
-        yield f"\n[主AI错误: {str(e)[:200]}]"
+    for chunk in llm.stream(messages):
+        if chunk.content:
+            full_response += chunk.content
+            yield chunk.content
 
     # 副 AI 追加机制标记
-    if full_response:
-        try:
-            mech_messages = [
-                SystemMessage(content=MECHANIC_PROMPT),
-                HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
-            ]
-            mech_resp = mechanic_llm.invoke(mech_messages)
-            if mech_resp.content:
-                yield "\n" + mech_resp.content.strip()
-        except Exception as e:
-            yield f"\n[副AI错误: {str(e)[:200]}]"
+    try:
+        mech_messages = [
+            SystemMessage(content=MECHANIC_PROMPT),
+            HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
+        ]
+        mech_resp = mechanic_llm.invoke(mech_messages)
+        if mech_resp.content:
+            yield "\n" + mech_resp.content.strip()
+    except Exception:
+        pass
 
 
 @app.post("/chat")
