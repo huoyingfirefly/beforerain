@@ -19,40 +19,26 @@ _client = OpenAI(
 )
 
 
-def _load_docs() -> list[str]:
-    """直接从 sqlite3 读取所有文档"""
+def _load_docs():
+    """直接从 sqlite3 读取所有文档 + 向量（兼容 ChromaDB 1.5+）"""
     conn = sqlite3.connect(str(DB_PATH))
     rows = conn.execute(
-        "SELECT id, string_value FROM embedding_metadata "
-        "WHERE key='chroma:document' ORDER BY id"
+        "SELECT em.id, em.string_value, eq.vector "
+        "FROM embedding_metadata em "
+        "LEFT JOIN embeddings_queue eq ON em.id = eq.seq_id "
+        "WHERE em.key='chroma:document' "
+        "ORDER BY em.id"
     ).fetchall()
     conn.close()
 
-    ids = [row[0] for row in rows]
-    docs = [json.loads(row[1]) for row in rows]
-
-    # 加载对应 embedding
-    conn = sqlite3.connect(str(DB_PATH))
-    emb_rows = conn.execute(
-        "SELECT id, embedding FROM embeddings ORDER BY id"
-    ).fetchall()
-    conn.close()
-
-    emb_map = {}
-    for eid, emb_blob in emb_rows:
-        arr = np.frombuffer(emb_blob, dtype=np.float32)
-        emb_map[eid] = arr
-
-    # 按 embedding_metadata 的顺序对齐
+    docs = []
     embeddings = []
-    ordered_docs = []
-    for i, doc in enumerate(docs):
-        if i < len(ids) and ids[i] in emb_map:
-            embeddings.append(emb_map[ids[i]])
-            ordered_docs.append(doc)
+    for row in rows:
+        if row[1] is not None and row[2] is not None:
+            docs.append(row[1])
+            embeddings.append(np.frombuffer(row[2], dtype=np.float32))
 
-    return ordered_docs, np.array(embeddings)
-
+    return docs, np.array(embeddings) if embeddings else np.array([])
 
 def _embed(text: str) -> np.ndarray:
     """调用 API 嵌入文本"""
