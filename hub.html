@@ -364,6 +364,11 @@ body {
             <span class="btn-label">纺锤商店</span>
             <span class="btn-arrow">▸</span>
         </button>
+        <button class="menu-btn" id="cardShopBtn">
+            <span class="btn-icon">🃏</span>
+            <span class="btn-label">神秘术商店</span>
+            <span class="btn-arrow">▸</span>
+        </button>
         <button class="menu-btn" id="worldBtn">
             <span class="btn-icon">🏆</span>
             <span class="btn-label">成就</span>
@@ -435,6 +440,18 @@ body {
     </div>
 </div>
 
+<!-- ====== 神秘术商店 ====== -->
+<div class="modal-overlay" id="cardShopModal">
+    <div class="modal">
+        <h3>🃏 神 秘 术 商 店</h3>
+        <div class="currency-big">⏳ <span id="cardShopCurrency">0</span> 纺锤</div>
+        <div id="cardShopList"></div>
+        <div class="btn-row">
+            <button class="btn-secondary" id="closeCardShopBtn">关闭</button>
+        </div>
+    </div>
+</div>
+
 <!-- ====== 成就弹窗 ====== -->
 <div class="modal-overlay" id="achieveModal">
     <div class="modal">
@@ -458,6 +475,7 @@ const HUB_VERSION = 1;  // 改代码后手动 +1，清缓存强制刷新
 const DEFAULT_META = {
     currency: 0, totalEarned: 0, gamesPlayed: 0,
     boosts: { luck: 0, insight: 0, charm: 0, resilience: 0, discern: 0 },
+    cardInventory: {},
     character: { name: '', background: '', insight: 1, charm: 1, combat: 1, lore: 1 },
     inventory: [],
     achievements: { firstGame: false, fiveGames: false, wealthy: false, rich: false, collector: false, dead: false },
@@ -496,6 +514,7 @@ function loadMeta() {
                 ...DEFAULT_META,
                 ...saved,
                 boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) },
+                cardInventory: saved.cardInventory || {},
                 character: { ...DEFAULT_META.character, ...(saved.character||{}) },
                 inventory: saved.inventory || [],
             };
@@ -574,6 +593,35 @@ function buyBoost(id, cost) {
     meta.boosts[id] = (meta.boosts[id] || 0) + 1;
     saveMeta();
     updateShopUI();
+}
+
+// =============================================
+//  神秘术商店
+// =============================================
+const CARD_SHOP = [
+    { id:'smash', icon:'⚔️', name:'猛击术', desc:'攻击伤害+3', cost:10 },
+    { id:'shield', icon:'🛡️', name:'铁壁术', desc:'防御减伤75%', cost:8 },
+    { id:'doubleslash', icon:'⚔️⚔️', name:'连斩术', desc:'攻击两次（D20各判定一次）', cost:15 },
+    { id:'heal', icon:'💚', name:'治愈术', desc:'战斗中回复3点HP', cost:12 },
+];
+
+function updateCardShopUI() {
+    document.getElementById('cardShopCurrency').textContent = meta.currency;
+    if (!meta.cardInventory) meta.cardInventory = {};
+    const container = document.getElementById('cardShopList');
+    container.innerHTML = CARD_SHOP.map(card => {
+        const owned = meta.cardInventory[card.id] || 0;
+        return '<div class="shop-item"><div class="shop-info"><div class="shop-name">' + card.icon + ' ' + card.name + (owned > 0 ? ' · 拥有:' + owned : '') + '</div><div class="shop-desc">' + card.desc + '</div></div><div class="shop-cost">⏳ ' + card.cost + '</div><button class="shop-buy" ' + (meta.currency < card.cost ? 'disabled' : '') + ' onclick="buyCard(\x27' + card.id + '\x27, ' + card.cost + ')">' + (owned > 0 ? '再购' : '购买') + '</button></div>';
+    }).join('');
+}
+
+function buyCard(id, cost) {
+    if (meta.currency < cost) return;
+    meta.currency -= cost;
+    if (!meta.cardInventory) meta.cardInventory = {};
+    meta.cardInventory[id] = (meta.cardInventory[id] || 0) + 1;
+    saveMeta();
+    updateCardShopUI();
 }
 
 // =============================================
@@ -666,6 +714,16 @@ document.getElementById('shopBtn').addEventListener('click', () => {
 });
 document.getElementById('closeShopBtn').addEventListener('click', () => {
     shopModal.classList.remove('show');
+});
+
+// 神秘术商店弹窗
+const cardShopModal = document.getElementById('cardShopModal');
+document.getElementById('cardShopBtn').addEventListener('click', () => {
+    updateCardShopUI();
+    cardShopModal.classList.add('show');
+});
+document.getElementById('closeCardShopBtn').addEventListener('click', () => {
+    cardShopModal.classList.remove('show');
 });
 
 // 成就弹窗
