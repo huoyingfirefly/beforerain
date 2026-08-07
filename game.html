@@ -819,6 +819,7 @@ function loadMeta() {
                 ...DEFAULT_META,
                 ...saved,
                 boosts: { ...DEFAULT_META.boosts, ...(saved.boosts||{}) },
+                cardInventory: saved.cardInventory || {},
                 character: { ...DEFAULT_META.character, ...(saved.character||{}) },
                 inventory: saved.inventory || [],
             };
