@@ -388,14 +388,6 @@ body {
 
         <hr style="border-color:var(--border-dark);margin:18px 0;">
 
-        <h3 style="font-size:14px;letter-spacing:4px;">角 色 创 建</h3>
-
-        <label>角色姓名</label>
-        <input id="charName" placeholder="为角色取名，留空则随机分配..." />
-
-        <label>背景简述</label>
-        <input id="charBg" placeholder="描述角色背景，留空则随机分配..." />
-
         <label>属性分配（共8点可分配，每项1-3级）</label>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
             <div style="display:flex;align-items:center;gap:6px;">
@@ -474,7 +466,7 @@ const HUB_VERSION = 1;  // 改代码后手动 +1，清缓存强制刷新
 
 const DEFAULT_META = {
     currency: 0, totalEarned: 0, gamesPlayed: 0,
-    boosts: { luck: 0, insight: 0, charm: 0, resilience: 0, discern: 0 },
+    boosts: { luck: 0, insight: 0, charm: 0, resilience: 0 },
     cardInventory: {},
     character: { name: '', background: '', insight: 1, charm: 1, combat: 1, lore: 1 },
     inventory: [],
@@ -487,7 +479,7 @@ const SHOP_ITEMS = [
     { id: 'insight',    name: '赤金罗盘',   desc: '每轮可多掷一次D20，取最高结果',     cost: 50, icon: '◈' },
     { id: 'charm',      name: '双蛇权杖',   desc: '初见 NPC 时自动获得良好印象，对话更容易',       cost: 40, icon: '❦' },
     { id: 'resilience', name: '长青剑',   desc: '核素浓度达10时自动消耗1层抵消（消耗品）',     cost: 60, icon: '⛊' },
-    { id: 'discern', name: '分辨善恶之果', desc: '显示三个选项中最安全的路径', cost: 240, icon: '🍎' },
+
 ];
 
 const DEFAULT_WORLD = `【暴雨机制】
@@ -687,8 +679,8 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
 
     // 保存角色
     meta.character = {
-        name: document.getElementById('charName').value.trim() || randNames[Math.floor(Math.random() * randNames.length)],
-        background: document.getElementById('charBg').value.trim() || randBgs[Math.floor(Math.random() * randBgs.length)],
+        name: randNames[Math.floor(Math.random() * randNames.length)],
+        background: randBgs[Math.floor(Math.random() * randBgs.length)],
         insight: vals[0], charm: vals[1], combat: vals[2], lore: vals[3],
     };
     meta.inventory = [];
