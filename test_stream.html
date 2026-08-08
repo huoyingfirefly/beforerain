@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Stream Test</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:20px auto;padding:20px;background:#1a1a2e;color:#ccc}#out{white-space:pre-wrap;border:1px solid #333;padding:20px;min-height:200px;background:#111;border-radius:4px}button{padding:10px 20px;cursor:pointer}</style>
+</head><body>
+<h2>Stream 测试</h2>
+<button onclick="test()">发送测试请求</button>
+<hr>
+<div id="out">等待测试...</div>
+<script>
+async function test() {
+    const out = document.getElementById('out');
+    out.textContent = '发送中...\n';
+    try {
+        const res = await fetch('/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                prompt: '游戏开始，叙事并给出3个选项',
+                history: [],
+                system: '你是互动剧本GM。结尾输出：\n---\n1. 选项一\n2. 选项二\n3. 选项三'
+            })
+        });
+        out.textContent += '状态: ' + res.status + '\n';
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let full = '';
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, {stream: true});
+            full += chunk;
+            out.textContent = full;
+        }
+        out.textContent += '\n\n=== 完成 ===';
+    } catch(e) {
+        out.textContent += '\n错误: ' + e.message;
+    }
+}
+</script>
+</body></html>

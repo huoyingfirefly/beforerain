@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/asus/AppData/Local/Python/bin/python3.exe --version)"
+    ]
+  }
+}
