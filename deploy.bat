@@ -156,7 +156,7 @@ if exist "%~dp0.env.example" (
 ) else (
     (
 echo DEEPSEEK_API_KEY=your_api_key_here
-echo DEEPSEEK_BASE_URL=https://api.deepseek.com
+echo DEEPSEEK_BASE_URL=https://api.siliconflow.cn/v1
 echo DEEPSEEK_MODEL=deepseek-chat
 echo EMBED_API_KEY=your_api_key_here
 echo EMBED_BASE_URL=https://api.siliconflow.cn/v1
