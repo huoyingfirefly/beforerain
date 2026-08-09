@@ -58,34 +58,70 @@
 ## 项目结构
 
 ```
-├── api.py              # FastAPI 后端，双 AI 调用 + RAG 检索 + 流式输出
-├── rag_lite.py         # RAG 轻量引擎（sqlite3 直读 ChromaDB，无需 chromadb 包）
-├── rag_engine.py       # ChromaDB 索引工具（需 chromadb 包）
-├── hub.html            # 主菜单：新游戏/读档/神秘术商店/角色创建/成就
-├── game.html           # 游戏主页面：叙事/骰点/战斗/卡组编辑/音效
-├── .env.example        # 环境变量模板
-├── chroma_data/        # 向量库数据（已纳入 Git）
-└── world_lore_full.txt # 世界观源文档
+├── api.py                  # FastAPI 后端，双 AI 调用 + RAG 检索 + 流式输出
+├── rag_lite.py             # RAG 轻量引擎（sqlite3 直读 ChromaDB，无需 chromadb 包）
+├── rag_engine.py           # ChromaDB 索引工具（需 chromadb 包）
+├── deepseek.py             # DeepSeek 流式测试脚本
+├── deploy.bat              # 一键部署脚本（零环境 → 运行）
+├── requirements.txt        # 运行时 Python 依赖
+├── requirements-reindex.txt # 重建 RAG 索引所需的额外依赖（chromadb）
+├── hub.html                # 主菜单：新游戏/读档/神秘术商店/角色创建/成就
+├── game.html               # 游戏主页面：叙事/骰点/战斗/卡组编辑/音效
+├── .env.example            # 环境变量模板
+├── chroma_data/            # 向量库数据（已纳入 Git）
+└── world_lore_full.txt     # 世界观源文档
 ```
 
 ## 本地运行
 
+### 方式一：一键部署（Windows，零环境）
+
+**适用于全新电脑（连 Python 和 Git 都没有）。** 下载项目后双击 `deploy.bat`，脚本会自动完成：
+
+| 步骤 | 内容 | 容错策略 |
+|------|------|----------|
+| 0 | 检测 Python，没有则自动安装 | curl → PowerShell → winget → 手动 |
+| 1 | 检测项目文件，没有则克隆仓库 | GitHub → Gitee 镜像 |
+| 2 | 创建 `.env` 配置，引导注册 API Key | 弹浏览器 + 记事本 |
+| 3 | 安装 Python 依赖 | PyPI → 清华 → 阿里云 → 中科大镜像 |
+| 4 | 检查/重建 RAG 向量索引 | 已有索引则跳过 |
+| 5 | 启动服务器 `http://localhost:8000` | |
+
+> **注意**：如果在编辑器里修改了 `deploy.bat`，务必确保文件换行符为 **CRLF**（Windows），不是 LF（Unix）。LF 换行符会导致 cmd.exe 解析错乱、闪退。
+
+### 方式二：手动安装
+
 ```bash
-pip install fastapi uvicorn langchain-openai langchain-core python-dotenv openai numpy
+# 1. 安装 Python 3.10+ → https://www.python.org/downloads/
+#    安装时勾选 "Add Python to PATH"
 
-cp .env.example .env
-# 编辑 .env 填入：
-#   DEEPSEEK_API_KEY    DeepSeek 密钥
-#   DEEPSEEK_BASE_URL   https://api.deepseek.com
-#   DEEPSEEK_MODEL      deepseek-chat
-#   EMBED_API_KEY       千问 Embedding 密钥（DashScope）
-#   EMBED_BASE_URL      https://dashscope.aliyuncs.com/compatible-mode/v1
-#   EMBED_MODEL         text-embedding-v3
+# 2. 克隆仓库（GitHub 或 Gitee）
+git clone https://github.com/huoyingfirefly/beforerain.git
+:: 或国内镜像
+git clone https://gitee.com/fire-flies/beforerain.git
+cd beforerain
 
+# 3. 配置 API Key
+copy .env.example .env
+:: 编辑 .env 填入你的密钥
+
+# 4. 安装依赖
+pip install -r requirements.txt
+
+# 5. 启动
 python api.py
 ```
 
 浏览器访问 `http://localhost:8000`。
+
+### API Key 获取
+
+| 密钥 | 用途 | 注册地址 |
+|------|------|----------|
+| `DEEPSEEK_API_KEY` | 主 AI 叙事 + 副 AI 判定 | https://platform.deepseek.com |
+| `EMBED_API_KEY` | 向量检索（RAG） | https://cloud.siliconflow.cn (免费额度) |
+
+> DeepSeek：充值 10 元够用数月。Embedding 也可用阿里云 DashScope (`https://dashscope.aliyuncs.com/compatible-mode/v1`, model: `text-embedding-v3`)。
 
 ## 服务器部署
 
