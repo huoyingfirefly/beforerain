@@ -221,14 +221,17 @@ echo OK
 :: =============================================
 echo.
 echo [4/5] Checking RAG index...
-%PYEXE% -c "import sys; sys.path.insert(0, r'%~dp0'); from rag_lite import is_indexed; exit(0 if is_indexed() else 1)" >nul 2>&1
+:: Strip trailing backslash to avoid Python string escape issues
+set "HERE=%~dp0"
+if "%HERE:~-1%"=="\" set "HERE=%HERE:~0,-1%"
+%PYEXE% -c "import sys; sys.path.insert(0, r'%HERE%'); from rag_lite import is_indexed; exit(0 if is_indexed() else 1)" >nul 2>&1
 if errorlevel 1 (
     echo Index not found, rebuilding...
     %PYEXE% -m pip install chromadb -q -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn 2>nul
     if errorlevel 1 (
         %PYEXE% -m pip install chromadb -q
     )
-    %PYEXE% -c "import sys; sys.path.insert(0, r'%~dp0'); from rag_engine import index_lore; n = index_lore(r'%~dp0world_lore_full.txt'); print(f'Indexed {n} chunks')"
+    %PYEXE% -c "import sys; sys.path.insert(0, r'%HERE%'); from rag_engine import index_lore; n = index_lore(r'%HERE%\\world_lore_full.txt'); print(f'Indexed {n} chunks')"
 )
 echo OK
 
