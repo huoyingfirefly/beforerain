@@ -1,4 +1,5 @@
 import os
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -121,13 +122,15 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
     return messages
 
 
-def stream_response(prompt: str, history: list[dict], system: str):
+async def stream_response(prompt: str, history: list[dict], system: str):
     # 先取 RAG 上下文（主AI和副AI共用）
-    rag_context = query_world(prompt, n=8, pick=3)
+    rag_context = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: query_world(prompt, n=8, pick=3)
+    )
 
     messages = build_messages(prompt, history, system, rag_context)
     full_response = ""
-    for chunk in llm.stream(messages):
+    async for chunk in llm.astream(messages):
         if chunk.content:
             full_response += chunk.content
             yield chunk.content
@@ -138,7 +141,7 @@ def stream_response(prompt: str, history: list[dict], system: str):
             SystemMessage(content=MECHANIC_PROMPT),
             HumanMessage(content=f"玩家行动：{prompt}\n主AI回复：{full_response[-500:]}\n请输出机制标记。"),
         ]
-        mech_resp = mechanic_llm.invoke(mech_messages)
+        mech_resp = await mechanic_llm.ainvoke(mech_messages)
         if mech_resp.content:
             yield "\n" + mech_resp.content.strip()
     except Exception:
@@ -146,7 +149,7 @@ def stream_response(prompt: str, history: list[dict], system: str):
 
 
 @app.post("/chat")
-def chat(req: ChatRequest):
+async def chat(req: ChatRequest):
     return StreamingResponse(
         stream_response(req.prompt, req.history, req.system),
         media_type="text/plain; charset=utf-8",
