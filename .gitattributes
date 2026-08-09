@@ -1,0 +1,4 @@
+* text=auto
+
+# Windows batch files MUST be CRLF or they crash on double-click
+*.bat text eol=crlf
