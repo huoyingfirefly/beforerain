@@ -127,6 +127,15 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
         system = system + "\n\n【世界观·实体关系】\n" + graph_context
     if rag_context:
         system = system + "\n\n【世界观·叙事片段】\n" + rag_context
+
+    # 防幻觉：只准引用检索到的实体
+    system = system + (
+        "\n\n【硬性规则】"
+        "\n1. 只能使用上述【世界观·实体关系】中列出的角色、阵营、机制。不得凭空创造不存在的人物或设定。"
+        "\n2. 如果检索信息不足以支撑某个情节，优先推进现有线索而非自由发挥新设定。"
+        "\n3. 叙事风格参考【世界观·叙事片段】的笔调，但事实必须来自【实体关系】。"
+    )
+
     if system:
         messages.append(SystemMessage(content=system))
     for msg in history:
