@@ -1,0 +1,100 @@
+{
+  "nodes": {
+    "_说明": "每行一个节点。id 用英文拼音避免编码问题，name 填中文。description 里的内容会被AI引用，写得越详细效果越好。",
+
+    "示例角色_vertin": {
+      "type": "角色",
+      "name": "维尔汀",
+      "aliases": ["Vertin"],
+      "description": "唯一露天免疫暴雨者。"
+    },
+    "示例角色_sonetto": {
+      "type": "角色",
+      "name": "十四行诗",
+      "aliases": ["Sonetto"],
+      "description": ""
+    },
+    "示例角色_schneider": {
+      "type": "角色",
+      "name": "斯奈德",
+      "aliases": ["Schneider"],
+      "description": ""
+    },
+
+    "示例阵营_foundation": {
+      "type": "阵营",
+      "name": "圣洛夫基金会",
+      "aliases": ["基金会", "圣洛夫"],
+      "description": ""
+    },
+    "示例阵营_manus": {
+      "type": "阵营",
+      "name": "重塑之手",
+      "aliases": ["重塑之人", "Manus Vindictae"],
+      "description": ""
+    },
+    "示例阵营_island": {
+      "type": "阵营",
+      "name": "阿派朗岛",
+      "aliases": ["阿派朗"],
+      "description": "天然庇护点，不受暴雨影响。"
+    },
+
+    "示例事件_storm1999": {
+      "type": "事件",
+      "name": "1999年第一场暴雨",
+      "aliases": ["暴雨开端", "1999暴雨"],
+      "description": "暴雨首次降临，时间开始倒流。"
+    },
+
+    "示例机制_storm": {
+      "type": "机制",
+      "name": "暴雨机制",
+      "aliases": ["暴雨", "Rainstorm"],
+      "description": "雨水倒飞、时间回溯的灾难现象。触雨者被抹除。"
+    },
+    "示例机制_immunity": {
+      "type": "机制",
+      "name": "免疫方式",
+      "aliases": ["庇护", "免疫"],
+      "description": "三种庇护方式：手提箱、基金会堡垒、天然庇护点。"
+    },
+
+    "示例地点_suitcase": {
+      "type": "地点",
+      "name": "手提箱",
+      "aliases": [],
+      "description": "便携式庇护所，维尔汀的随身空间。"
+    }
+  },
+
+  "edges": {
+    "_说明": "每行一条关系。from/to 填节点 id（上面定义的那些）。relation 描述关系性质，用中文。",
+
+    "示例_schneider_belongs_to": {
+      "from": "示例角色_schneider",
+      "to": "示例阵营_manus",
+      "relation": "隶属于"
+    },
+    "示例_vertin_opposes": {
+      "from": "示例角色_vertin",
+      "to": "示例阵营_manus",
+      "relation": "敌对"
+    },
+    "示例_vertin_immune": {
+      "from": "示例角色_vertin",
+      "to": "示例机制_storm",
+      "relation": "露天免疫"
+    },
+    "示例_island_protects": {
+      "from": "示例阵营_island",
+      "to": "示例机制_immunity",
+      "relation": "天然庇护方式"
+    },
+    "示例_suitcase_protects": {
+      "from": "示例地点_suitcase",
+      "to": "示例机制_immunity",
+      "relation": "庇护方式之一"
+    }
+  }
+}

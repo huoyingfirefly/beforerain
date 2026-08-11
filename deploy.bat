@@ -157,10 +157,10 @@ if exist "%~dp0.env.example" (
     (
 echo DEEPSEEK_API_KEY=your_api_key_here
 echo DEEPSEEK_BASE_URL=https://api.siliconflow.cn/v1
-echo DEEPSEEK_MODEL=deepseek-chat
+echo DEEPSEEK_MODEL=deepseek-ai/DeepSeek-V3
 echo EMBED_API_KEY=your_api_key_here
-echo EMBED_BASE_URL=https://api.siliconflow.cn/v1
-echo EMBED_MODEL=BAAI/bge-large-zh-v1.5
+echo EMBED_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+echo EMBED_MODEL=text-embedding-v3
     ) > "%~dp0.env"
 )
 

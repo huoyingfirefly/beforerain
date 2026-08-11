@@ -9,7 +9,13 @@ from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from dotenv import load_dotenv
-from rag_lite import query_world, is_indexed, index_lore
+from rag_lite import query_world, is_indexed as rag_is_indexed, index_lore
+from graph_engine import (
+    query_world as graph_query_world,
+    get_context as graph_get_context,
+    is_indexed as graph_is_indexed,
+    build_index as graph_index,
+)
 
 load_dotenv()
 
@@ -18,7 +24,8 @@ BASE_DIR = Path(__file__).parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not is_indexed():
+    # RAG 文本库
+    if not rag_is_indexed():
         try:
             n = index_lore()
             print(f"[RAG] 已索引 {n} 个世界观片段")
@@ -26,6 +33,16 @@ async def lifespan(app: FastAPI):
             print(f"[RAG] 索引失败: {e}")
     else:
         print("[RAG] 世界观索引已存在")
+
+    # 图数据库
+    if not graph_is_indexed():
+        try:
+            n = graph_index()
+            print(f"[Graph] 已索引 {n} 个实体")
+        except Exception as e:
+            print(f"[Graph] 索引失败: {e}")
+    else:
+        print(f"[Graph] 实体索引已存在")
     yield
 
 
@@ -103,10 +120,13 @@ class ChatRequest(BaseModel):
     system: str = ""
 
 
-def build_messages(prompt: str, history: list[dict], system: str, rag_context: str = ""):
+def build_messages(prompt: str, history: list[dict], system: str, rag_context: str = "", graph_context: str = ""):
     messages = []
+    # 图数据库优先（精确事实），RAG 文本库其次（叙事文笔）
+    if graph_context:
+        system = system + "\n\n【世界观·实体关系】\n" + graph_context
     if rag_context:
-        system = system + "\n\n【RAG补充世界观】\n" + rag_context
+        system = system + "\n\n【世界观·叙事片段】\n" + rag_context
     if system:
         messages.append(SystemMessage(content=system))
     for msg in history:
@@ -123,12 +143,18 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
 
 
 async def stream_response(prompt: str, history: list[dict], system: str):
-    # 先取 RAG 上下文（主AI和副AI共用）
+    # RAG 文本库（同步，走执行器避免阻塞）
     rag_context = await asyncio.get_event_loop().run_in_executor(
         None, lambda: query_world(prompt, n=8, pick=3)
     )
 
-    messages = build_messages(prompt, history, system, rag_context)
+    # 图数据库（异步，AI 判断检索类型 → 按类型向量搜索）
+    try:
+        graph_context = await graph_get_context(prompt, llm=mechanic_llm)
+    except Exception:
+        graph_context = graph_query_world(prompt)  # AI 调用失败则回退全类型搜索
+
+    messages = build_messages(prompt, history, system, rag_context, graph_context)
     full_response = ""
     async for chunk in llm.astream(messages):
         if chunk.content:
@@ -187,7 +213,10 @@ def reindex():
 
 @app.get("/rag/status")
 def rag_status():
-    return {"indexed": is_indexed()}
+    return {
+        "rag_indexed": rag_is_indexed(),
+        "graph_indexed": graph_is_indexed(),
+    }
 
 
 if __name__ == "__main__":
