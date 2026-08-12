@@ -324,7 +324,7 @@ body {
 .settings-note { color:var(--text-dim); font-size:.8em; margin:12px 0 0; }
 .settings-btn { opacity:.7; }
 .settings-btn:hover { opacity:1; }
-}
+
 </style>
 </head>
 <body>
@@ -409,17 +409,17 @@ body {
     <label>LLM API Key（叙事+判定）</label>
     <input type="password" id="cfgApiKey" placeholder="sk-...">
     <label>LLM Base URL</label>
-    <input type="text" id="cfgBaseUrl" placeholder="https://api.siliconflow.cn/v1">
+    <input type="text" id="cfgBaseUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
     <label>LLM Model</label>
-    <input type="text" id="cfgModel" placeholder="deepseek-ai/DeepSeek-V3">
+    <input type="text" id="cfgModel" placeholder="deepseek-v4-flash-0731">
 
     <hr>
     <label>Embedding API Key（向量检索）</label>
     <input type="password" id="cfgEmbedKey" placeholder="可与上相同">
     <label>Embedding Base URL</label>
-    <input type="text" id="cfgEmbedUrl" placeholder="https://api.siliconflow.cn/v1">
+    <input type="text" id="cfgEmbedUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
     <label>Embedding Model</label>
-    <input type="text" id="cfgEmbedModel" placeholder="BAAI/bge-large-zh-v1.5">
+    <input type="text" id="cfgEmbedModel" placeholder="text-embedding-v3">
 
     <div class="settings-actions">
         <button id="cfgSave">保存设置</button>
@@ -811,11 +811,11 @@ document.getElementById('closeAchieveBtn').addEventListener('click', () => {
 document.getElementById('settingsBtn').addEventListener('click', function() {
     var s = JSON.parse(localStorage.getItem('beforerain_api') || '{}');
     document.getElementById('cfgApiKey').value = s.api_key || '';
-    document.getElementById('cfgBaseUrl').value = s.base_url || 'https://api.siliconflow.cn/v1';
-    document.getElementById('cfgModel').value = s.model || 'deepseek-ai/DeepSeek-V3';
+    document.getElementById('cfgBaseUrl').value = s.base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    document.getElementById('cfgModel').value = s.model || 'deepseek-v4-flash-0731';
     document.getElementById('cfgEmbedKey').value = s.embed_key || '';
-    document.getElementById('cfgEmbedUrl').value = s.embed_base_url || 'https://api.siliconflow.cn/v1';
-    document.getElementById('cfgEmbedModel').value = s.embed_model || 'BAAI/bge-large-zh-v1.5';
+    document.getElementById('cfgEmbedUrl').value = s.embed_base_url || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+    document.getElementById('cfgEmbedModel').value = s.embed_model || 'text-embedding-v3';
     document.getElementById('settingsOverlay').classList.add('show');
 });
 

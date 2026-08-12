@@ -22,10 +22,10 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent
 
 # 服务器端默认值（玩家未提供 key 时回退）
-DEFAULT_LLM_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn/v1")
-DEFAULT_LLM_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3")
-DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
-DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
+DEFAULT_LLM_URL = os.getenv("DEEPSEEK_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+DEFAULT_LLM_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash-0731")
+DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
 SERVER_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 SERVER_EMBED_KEY = os.getenv("EMBED_API_KEY", "")
 

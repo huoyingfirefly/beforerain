@@ -19,8 +19,8 @@ STORE_DIR = BASE_DIR / "chroma_data"
 
 # 服务器默认值（玩家可覆盖）
 DEFAULT_EMBED_KEY = os.getenv("EMBED_API_KEY", "")
-DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
-DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
+DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
 
 
 def _make_embed_client(key: str = "", url: str = "", model: str = ""):
