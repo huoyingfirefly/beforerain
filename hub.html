@@ -307,6 +307,24 @@ body {
     .menu-btn { padding: 14px 18px; font-size: 14px; letter-spacing: 3px; }
     .modal { padding: 20px 16px; width: 95%; }
 }
+
+/* API 设置面板 */
+.settings-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; justify-content:center; align-items:center; }
+.settings-overlay.show { display:flex; }
+.settings-panel { background:var(--bg-panel); border:1px solid var(--border-mid); border-radius:8px; padding:24px; max-width:440px; width:90%; max-height:90vh; overflow-y:auto; }
+.settings-panel h2 { color:var(--gold); margin:0 0 8px; font-size:1.3em; }
+.settings-panel .settings-hint { color:var(--text-dim); font-size:.85em; margin-bottom:16px; }
+.settings-panel label { display:block; color:var(--text-light); font-size:.85em; margin:10px 0 4px; }
+.settings-panel input { width:100%; background:var(--bg-card); border:1px solid var(--border-dark); color:var(--text-main); padding:8px 10px; border-radius:4px; font-size:.9em; }
+.settings-panel input:focus { border-color:var(--gold); outline:none; }
+.settings-panel hr { border:0; border-top:1px solid var(--border-dark); margin:14px 0; }
+.settings-actions { display:flex; gap:10px; margin-top:16px; }
+.settings-actions button { flex:1; padding:10px; border:none; border-radius:4px; cursor:pointer; font-size:.95em; background:var(--gold); color:var(--bg-deep); }
+.settings-actions button.secondary { background:var(--border-mid); color:var(--text-main); }
+.settings-note { color:var(--text-dim); font-size:.8em; margin:12px 0 0; }
+.settings-btn { opacity:.7; }
+.settings-btn:hover { opacity:1; }
+}
 </style>
 </head>
 <body>
@@ -374,7 +392,41 @@ body {
             <span class="btn-label">成就</span>
             <span class="btn-arrow">▸</span>
         </button>
+        <button class="menu-btn settings-btn" id="settingsBtn">
+            <span class="btn-icon">⚙️</span>
+            <span class="btn-label">API 设置</span>
+            <span class="btn-arrow">▸</span>
+        </button>
     </div>
+</div>
+
+<!-- API 设置弹窗 -->
+<div class="settings-overlay" id="settingsOverlay">
+<div class="settings-panel">
+    <h2>API 密钥设置</h2>
+    <p class="settings-hint">使用你自己的 SiliconFlow API Key，服务器不保存。密钥存储在浏览器本地。</p>
+
+    <label>LLM API Key（叙事+判定）</label>
+    <input type="password" id="cfgApiKey" placeholder="sk-...">
+    <label>LLM Base URL</label>
+    <input type="text" id="cfgBaseUrl" placeholder="https://api.siliconflow.cn/v1">
+    <label>LLM Model</label>
+    <input type="text" id="cfgModel" placeholder="deepseek-ai/DeepSeek-V3">
+
+    <hr>
+    <label>Embedding API Key（向量检索）</label>
+    <input type="password" id="cfgEmbedKey" placeholder="可与上相同">
+    <label>Embedding Base URL</label>
+    <input type="text" id="cfgEmbedUrl" placeholder="https://api.siliconflow.cn/v1">
+    <label>Embedding Model</label>
+    <input type="text" id="cfgEmbedModel" placeholder="BAAI/bge-large-zh-v1.5">
+
+    <div class="settings-actions">
+        <button id="cfgSave">保存设置</button>
+        <button id="cfgCancel" class="secondary">取消</button>
+    </div>
+    <p class="settings-note">💡 SiliconFlow 注册即送免费额度。Embedding 可用同一 Key。</p>
+</div>
 </div>
 
 <!-- ====== 世界观弹窗 ====== -->
@@ -753,6 +805,38 @@ document.getElementById('closeAchieveBtn').addEventListener('click', () => {
 // 通过 startBtn.dataset.mode === 'save-only' 区分模式
 
 // =============================================
+// =============================================
+//  API 设置面板
+// =============================================
+document.getElementById('settingsBtn').addEventListener('click', function() {
+    var s = JSON.parse(localStorage.getItem('beforerain_api') || '{}');
+    document.getElementById('cfgApiKey').value = s.api_key || '';
+    document.getElementById('cfgBaseUrl').value = s.base_url || 'https://api.siliconflow.cn/v1';
+    document.getElementById('cfgModel').value = s.model || 'deepseek-ai/DeepSeek-V3';
+    document.getElementById('cfgEmbedKey').value = s.embed_key || '';
+    document.getElementById('cfgEmbedUrl').value = s.embed_base_url || 'https://api.siliconflow.cn/v1';
+    document.getElementById('cfgEmbedModel').value = s.embed_model || 'BAAI/bge-large-zh-v1.5';
+    document.getElementById('settingsOverlay').classList.add('show');
+});
+
+document.getElementById('cfgCancel').addEventListener('click', function() {
+    document.getElementById('settingsOverlay').classList.remove('show');
+});
+
+document.getElementById('cfgSave').addEventListener('click', function() {
+    var s = {
+        api_key: document.getElementById('cfgApiKey').value.trim(),
+        base_url: document.getElementById('cfgBaseUrl').value.trim(),
+        model: document.getElementById('cfgModel').value.trim(),
+        embed_key: document.getElementById('cfgEmbedKey').value.trim(),
+        embed_base_url: document.getElementById('cfgEmbedUrl').value.trim(),
+        embed_model: document.getElementById('cfgEmbedModel').value.trim(),
+    };
+    localStorage.setItem('beforerain_api', JSON.stringify(s));
+    document.getElementById('settingsOverlay').classList.remove('show');
+    alert('API 设置已保存！');
+});
+
 //  初始化
 // =============================================
 updateUI();

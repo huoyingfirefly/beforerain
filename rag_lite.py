@@ -12,11 +12,17 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "chroma_data" / "chroma.sqlite3"
 
-# Embedding 客户端
-_client = OpenAI(
-    api_key=os.getenv("EMBED_API_KEY", os.getenv("DEEPSEEK_API_KEY", "")),
-    base_url=os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-)
+# 服务器默认值
+_DEFAULT_KEY = os.getenv("EMBED_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
+_DEFAULT_URL = os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+_DEFAULT_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
+
+
+def _make_client(key: str = "", url: str = ""):
+    return OpenAI(
+        api_key=key or _DEFAULT_KEY,
+        base_url=url or _DEFAULT_URL,
+    )
 
 
 def _load_docs():
@@ -40,16 +46,15 @@ def _load_docs():
 
     return docs, np.array(embeddings) if embeddings else np.array([])
 
-def _embed(text: str) -> np.ndarray:
-    """调用 API 嵌入文本"""
-    resp = _client.embeddings.create(
-        model=os.getenv("EMBED_MODEL", "text-embedding-v3"),
-        input=text,
-    )
+def _embed(text: str, key: str = "", url: str = "", model: str = "") -> np.ndarray:
+    """调用 API 嵌入文本（接受可选密钥参数）"""
+    client = _make_client(key, url) if (key or url) else _make_client()
+    resp = client.embeddings.create(model=model or _DEFAULT_MODEL, input=text)
     return np.array(resp.data[0].embedding, dtype=np.float32)
 
 
-def query_world(query: str, n: int = 8, pick: int = 3, max_chars: int = 1200) -> str:
+def query_world(query: str, n: int = 8, pick: int = 3, max_chars: int = 1200,
+                embed_key: str = "", embed_url: str = "", embed_model: str = "") -> str:
     """检索文档片段，随机抽取增加多样性"""
     try:
         docs, embs = _load_docs()
@@ -61,7 +66,7 @@ def query_world(query: str, n: int = 8, pick: int = 3, max_chars: int = 1200) ->
         noise_words = ['悬疑','生存','情感','史诗','战斗','秘法','逃亡','探索','阴谋','宿命']
         noisy_query = query + ' ' + random.choice(noise_words)
 
-        q_emb = _embed(noisy_query)
+        q_emb = _embed(noisy_query, embed_key, embed_url, embed_model)
         sims = np.dot(embs, q_emb) / (np.linalg.norm(embs, axis=1) * np.linalg.norm(q_emb) + 1e-8)
         top_idx = np.argsort(sims)[-n:][::-1]
 

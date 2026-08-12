@@ -21,10 +21,28 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).parent
 
+# 服务器端默认值（玩家未提供 key 时回退）
+DEFAULT_LLM_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.siliconflow.cn/v1")
+DEFAULT_LLM_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/DeepSeek-V3")
+DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
+DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
+SERVER_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+SERVER_EMBED_KEY = os.getenv("EMBED_API_KEY", "")
+
+
+def _make_llm(api_key: str, base_url: str, model: str, temperature: float, streaming: bool):
+    return ChatOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        model=model,
+        temperature=temperature,
+        streaming=streaming,
+        max_tokens=2048,
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # RAG 文本库
     if not rag_is_indexed():
         try:
             n = index_lore()
@@ -34,7 +52,6 @@ async def lifespan(app: FastAPI):
     else:
         print("[RAG] 世界观索引已存在")
 
-    # 图数据库
     if not graph_is_indexed():
         try:
             n = graph_index()
@@ -46,28 +63,8 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="DeepSeek API", lifespan=lifespan)
-
+app = FastAPI(title="Before Rain API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-# 主 AI：叙事
-llm = ChatOpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-    temperature=0.7,
-    streaming=True,
-    max_tokens=2048,
-)
-
-# 副 AI：机制判定
-mechanic_llm = ChatOpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY", "your-api-key"),
-    base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
-    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
-    temperature=0,
-    streaming=False,
-)
 
 MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记。
 
@@ -113,22 +110,27 @@ MECHANIC_PROMPT = """你是游戏机制判定AI，只输出标记。
 只输出标记，不写解释。"""
 
 
-
 class ChatRequest(BaseModel):
     prompt: str
     history: list[dict] = []
     system: str = ""
+    # 玩家密钥（空则回退服务器默认）
+    api_key: str = ""
+    embed_key: str = ""
+    base_url: str = ""
+    model: str = ""
+    embed_base_url: str = ""
+    embed_model: str = ""
 
 
-def build_messages(prompt: str, history: list[dict], system: str, rag_context: str = "", graph_context: str = ""):
+def build_messages(prompt: str, history: list[dict], system: str,
+                   rag_context: str = "", graph_context: str = ""):
     messages = []
-    # 图数据库优先（精确事实），RAG 文本库其次（叙事文笔）
     if graph_context:
         system = system + "\n\n【世界观·实体关系】\n" + graph_context
     if rag_context:
         system = system + "\n\n【世界观·叙事片段】\n" + rag_context
 
-    # 防幻觉：只准引用检索到的实体
     system = system + (
         "\n\n【硬性规则】"
         "\n1. 只能使用上述【世界观·实体关系】中列出的角色、阵营、机制。不得凭空创造不存在的人物或设定。"
@@ -143,7 +145,6 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
             messages.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "ai":
             messages.append(AIMessage(content=msg["content"]))
-    # 轮次计数：强制AI在20轮内收束
     round_num = len([m for m in history if m["role"] == "user"]) + 1
     if round_num >= 15:
         prompt = f"[第{round_num}轮/最多20轮，请尽快推进结局] " + prompt
@@ -151,26 +152,48 @@ def build_messages(prompt: str, history: list[dict], system: str, rag_context: s
     return messages
 
 
-async def stream_response(prompt: str, history: list[dict], system: str):
-    # RAG 文本库（同步，走执行器避免阻塞）
+async def stream_response(prompt: str, history: list[dict], system: str,
+                          api_key: str, embed_key: str,
+                          base_url: str, model: str,
+                          embed_base_url: str, embed_model: str):
+    # 合并默认值
+    llm_key = api_key or SERVER_API_KEY
+    llm_url = base_url or DEFAULT_LLM_URL
+    llm_model = model or DEFAULT_LLM_MODEL
+    emb_key = embed_key or SERVER_EMBED_KEY
+    emb_url = embed_base_url or DEFAULT_EMBED_URL
+    emb_model = embed_model or DEFAULT_EMBED_MODEL
+
+    # 每请求临时创建 LLM 客户端
+    main_llm = _make_llm(llm_key, llm_url, llm_model, 0.7, True)
+    mechanic_llm = _make_llm(llm_key, llm_url, llm_model, 0, False)
+
+    # RAG 文本库
     rag_context = await asyncio.get_event_loop().run_in_executor(
-        None, lambda: query_world(prompt, n=8, pick=3)
+        None, lambda: query_world(prompt, n=8, pick=3,
+                                  embed_key=emb_key, embed_url=emb_url, embed_model=emb_model)
     )
 
-    # 图数据库（异步，AI 判断检索类型 → 按类型向量搜索）
+    # 图数据库（AI 路由 → 分类向量 + 图展开）
     try:
-        graph_context = await graph_get_context(prompt, llm=mechanic_llm)
+        graph_context = await graph_get_context(
+            prompt, llm=mechanic_llm,
+            embed_key=emb_key, embed_url=emb_url, embed_model=emb_model,
+        )
     except Exception:
-        graph_context = graph_query_world(prompt)  # AI 调用失败则回退全类型搜索
+        graph_context = graph_query_world(
+            prompt,
+            embed_key=emb_key, embed_url=emb_url, embed_model=emb_model,
+        )
 
     messages = build_messages(prompt, history, system, rag_context, graph_context)
     full_response = ""
-    async for chunk in llm.astream(messages):
+    async for chunk in main_llm.astream(messages):
         if chunk.content:
             full_response += chunk.content
             yield chunk.content
 
-    # 副 AI 追加机制标记
+    # 副 AI 机制标记
     try:
         mech_messages = [
             SystemMessage(content=MECHANIC_PROMPT),
@@ -186,7 +209,12 @@ async def stream_response(prompt: str, history: list[dict], system: str):
 @app.post("/chat")
 async def chat(req: ChatRequest):
     return StreamingResponse(
-        stream_response(req.prompt, req.history, req.system),
+        stream_response(
+            req.prompt, req.history, req.system,
+            req.api_key, req.embed_key,
+            req.base_url, req.model,
+            req.embed_base_url, req.embed_model,
+        ),
         media_type="text/plain; charset=utf-8",
     )
 

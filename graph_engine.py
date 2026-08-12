@@ -17,19 +17,23 @@ load_dotenv()
 BASE_DIR = Path(__file__).parent
 STORE_DIR = BASE_DIR / "chroma_data"
 
-_embed_client = OpenAI(
-    api_key=os.getenv("EMBED_API_KEY", ""),
-    base_url=os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1"),
-)
-EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
+# 服务器默认值（玩家可覆盖）
+DEFAULT_EMBED_KEY = os.getenv("EMBED_API_KEY", "")
+DEFAULT_EMBED_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
+DEFAULT_EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-large-zh-v1.5")
 
 
-# ==========================================
-# 构建向量库（你来调）
-# ==========================================
+def _make_embed_client(key: str = "", url: str = "", model: str = ""):
+    """创建临时嵌入客户端（每请求一个）"""
+    return (
+        OpenAI(api_key=key or DEFAULT_EMBED_KEY, base_url=url or DEFAULT_EMBED_URL),
+        model or DEFAULT_EMBED_MODEL,
+    )
 
-def _embed(text: str) -> np.ndarray:
-    resp = _embed_client.embeddings.create(model=EMBED_MODEL, input=text)
+
+def _embed(text: str, key: str = "", url: str = "", model: str = "") -> np.ndarray:
+    client, m = _make_embed_client(key, url, model)
+    resp = client.embeddings.create(model=m, input=text)
     return np.array(resp.data[0].embedding, dtype=np.float32)
 
 
@@ -38,12 +42,11 @@ def _store_paths(etype: str) -> tuple[Path, Path]:
     return STORE_DIR / f"graph_{safe}.db", STORE_DIR / f"graph_{safe}.npy"
 
 
-def build_index(etype: str, entities: list[dict]) -> int:
+def build_index(etype: str, entities: list[dict],
+                embed_key: str = "", embed_url: str = "", embed_model: str = "") -> int:
     """
-    构建一个类型的向量库。
+    构建一个类型的向量库（服务端操作，用默认 key）。
     entities: [{"name": "维尔汀", "text": "唯一露天免疫暴雨者..."}, ...]
-
-    返回实体数量。
     """
     STORE_DIR.mkdir(parents=True, exist_ok=True)
     db_path, vec_path = _store_paths(etype)
@@ -54,7 +57,7 @@ def build_index(etype: str, entities: list[dict]) -> int:
 
     all_vecs = []
     for ent in entities:
-        vec = _embed(ent["text"])
+        vec = _embed(ent["text"], embed_key, embed_url, embed_model)
         all_vecs.append(vec)
         conn.execute("INSERT INTO entities (name, document) VALUES (?, ?)", (ent["name"], ent["text"]))
 
@@ -80,12 +83,13 @@ def _load_type(etype: str) -> tuple[list[dict], np.ndarray]:
     return [{"name": r[0], "document": r[1]} for r in rows], np.load(str(vec_path))
 
 
-def query_type(query: str, etype: str, n: int = 5) -> list[dict]:
+def query_type(query: str, etype: str, n: int = 5,
+               embed_key: str = "", embed_url: str = "", embed_model: str = "") -> list[dict]:
     """在单个类型库中搜索。返回 [{type, name, document, distance}]"""
     docs, embs = _load_type(etype)
     if len(docs) == 0:
         return []
-    q_emb = _embed(query)
+    q_emb = _embed(query, embed_key, embed_url, embed_model)
     norms_d = np.linalg.norm(embs, axis=1)
     sims = np.dot(embs, q_emb) / (norms_d * np.linalg.norm(q_emb) + 1e-8)
     results = []
@@ -97,11 +101,13 @@ def query_type(query: str, etype: str, n: int = 5) -> list[dict]:
     return results
 
 
-def query_types(query: str, types: list[str], n_per_type: int = 3) -> list[dict]:
+def query_types(query: str, types: list[str], n_per_type: int = 3,
+                embed_key: str = "", embed_url: str = "", embed_model: str = "") -> list[dict]:
     """在多个类型库中并行搜索，合并按距离排序。"""
     all_results = []
     for etype in types:
-        all_results.extend(query_type(query, etype, n=n_per_type))
+        all_results.extend(query_type(query, etype, n=n_per_type,
+                                      embed_key=embed_key, embed_url=embed_url, embed_model=embed_model))
     all_results.sort(key=lambda r: r["distance"])
     return all_results
 
@@ -170,6 +176,7 @@ async def suggest_types(query: str, llm=None) -> list[str]:
 async def get_context(
     query: str, n_total: int = 4, types: list[str] = None, llm=None,
     max_chars: int = 1000, expand_depth: int = 1,
+    embed_key: str = "", embed_url: str = "", embed_model: str = "",
 ) -> str:
     """
     三步合一管线：
@@ -190,7 +197,8 @@ async def get_context(
         types = list(types) + ["文风"]
 
     # Step 1: 分类向量检索
-    entities = query_types(query, types, n_per_type=max(1, n_total // len(types)))
+    entities = query_types(query, types, n_per_type=max(1, n_total // len(types)),
+                           embed_key=embed_key, embed_url=embed_url, embed_model=embed_model)
 
     # Step 2: 图展开——从命中的实体名出发沿边捞关系
     entity_names = [e["name"] for e in entities[:5]]
@@ -237,12 +245,14 @@ async def get_context(
     return "\n\n".join(parts)
 
 
-def query_world(query: str, n: int = 5, max_chars: int = 1000) -> str:
+def query_world(query: str, n: int = 5, max_chars: int = 1000,
+                embed_key: str = "", embed_url: str = "", embed_model: str = "") -> str:
     """同步全类型搜索（兼容 rag_lite 接口）"""
     types = _list_types()
     if not types:
         return ""
-    results = query_types(query, types, n_per_type=max(1, n // len(types)))[:n]
+    results = query_types(query, types, n_per_type=max(1, n // len(types)),
+                          embed_key=embed_key, embed_url=embed_url, embed_model=embed_model)[:n]
     parts = []
     for r in results:
         block = f"【{r['type']}·{r['name']}】{r['document']}"

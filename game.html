@@ -618,6 +618,15 @@ body {
 
 <script>
 // =============================================
+//  API 密钥（从 localStorage 读取，玩家自己在 hub 页设置）
+// =============================================
+function getAPISettings() {
+    try {
+        return JSON.parse(localStorage.getItem('beforerain_api') || '{}');
+    } catch(e) { return {}; }
+}
+
+// =============================================
 //  音效系统 (Web Audio API 合成)
 // =============================================
 const SFX = {
@@ -1302,10 +1311,19 @@ async function sendToAI(prompt, isSystem = false) {
 
     let fullResponse = '';
     try {
+        const s = getAPISettings();
         const res = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, history, system: fullSystem }),
+            body: JSON.stringify({
+                prompt, history, system: fullSystem,
+                api_key: s.api_key || '',
+                embed_key: s.embed_key || '',
+                base_url: s.base_url || '',
+                model: s.model || '',
+                embed_base_url: s.embed_base_url || '',
+                embed_model: s.embed_model || '',
+            }),
         });
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
