@@ -13,10 +13,10 @@ COLLECTION_NAME = "world_lore"
 CHROMA_DIR = str(BASE_DIR / "chroma_data")
 LORE_FILE = str(BASE_DIR / "world_lore_full.txt")
 
-# 云端 Embedding — 优先用硅基流动(免费额度)，其次 OpenAI
-EMBED_API_KEY = os.getenv("EMBED_API_KEY", os.getenv("EMBED_API_KEY", ""))
-EMBED_BASE_URL = os.getenv("EMBED_BASE_URL", "https://api.siliconflow.cn/v1")
-EMBED_MODEL = os.getenv("EMBED_MODEL", "qwen3.7-text-embedding")
+# 云端 Embedding — 默认阿里云 DashScope（与叙事模型同一服务商）
+EMBED_API_KEY = os.getenv("EMBED_API_KEY", "")
+EMBED_BASE_URL = os.getenv("EMBED_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+EMBED_MODEL = os.getenv("EMBED_MODEL", "text-embedding-v3")
 
 _openai_ef = embedding_functions.OpenAIEmbeddingFunction(
     api_key=EMBED_API_KEY,
